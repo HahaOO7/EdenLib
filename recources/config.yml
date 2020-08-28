@@ -1,0 +1,10 @@
+storage:
+  useSql: true
+  mySql:
+    use: false
+    host: localhost
+    username: root
+    password: ""
+    database: test
+    useSSL: true
+    checkConnection: 1000
