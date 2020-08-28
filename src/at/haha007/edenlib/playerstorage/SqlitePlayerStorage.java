@@ -98,7 +98,6 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 		return null;
 	}
 
-	//TODO
 	@Override
 	public void saveUUID(@NotNull String name, @NotNull UUID uuid) {
 		try {
