@@ -2,6 +2,7 @@ package at.haha007.edenlib.playerstorage;
 
 import at.haha007.edenlib.database.SqlDatabase;
 import at.haha007.edenlib.database.SqliteDatabase;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -44,12 +45,41 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 	}
 
 	@Override
+	public @NotNull ConfigurationSection loadConfig(@NotNull UUID player, String key) {
+		try {
+			PreparedStatement statement = database.prepareStatement("SELECT `Config` FROM `PerPlayerStorage` WHERE UUID = ?");
+			statement.setString(1, player.toString());
+			ResultSet result = statement.executeQuery();
+			if (result.next()) {
+				ConfigurationSection cfg = YamlConfiguration.loadConfiguration(new StringReader(decompress(result.getBlob(1).getBinaryStream()))).getConfigurationSection(key);
+				if (cfg == null) return new YamlConfiguration();
+				return cfg;
+			}
+		} catch (SQLException ignore) {
+		}
+		return new YamlConfiguration();
+	}
+
+	@Override
 	public void saveConfig(@Nullable YamlConfiguration cfg, @NotNull UUID player) {
 		if (cfg == null) cfg = new YamlConfiguration();
 		try {
 			PreparedStatement statement = database.prepareStatement("REPLACE INTO `PerPlayerStorage` VALUES(?, ?)");
 			statement.setString(1, player.toString());
 			statement.setBlob(2, new ByteArrayInputStream(compress(cfg.saveToString())));
+			statement.executeUpdate();
+		} catch (SQLException ignore) {
+		}
+	}
+
+	@Override
+	public void saveConfig(@NotNull String key, @Nullable ConfigurationSection section, @NotNull UUID player) {
+		YamlConfiguration configuration = loadConfig(player);
+		configuration.set(key, section);
+		try {
+			PreparedStatement statement = database.prepareStatement("REPLACE INTO `PerPlayerStorage` VALUES(?, ?)");
+			statement.setString(1, player.toString());
+			statement.setBlob(2, new ByteArrayInputStream(compress(configuration.saveToString())));
 			statement.executeUpdate();
 		} catch (SQLException ignore) {
 		}
@@ -68,6 +98,7 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 		return null;
 	}
 
+	//TODO
 	@Override
 	public void saveUUID(@NotNull String name, @NotNull UUID uuid) {
 		try {
