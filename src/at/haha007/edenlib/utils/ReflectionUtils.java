@@ -42,6 +42,21 @@ public class ReflectionUtils {
 		return null;
 	}
 
+	public static Object newInstance(String clazzName, String[] argTypes, Object[] constructorArgs) {
+		try {
+			Class<?>[] types = new Class[argTypes.length];
+			for (int i = 0; i < argTypes.length; i++) {
+				types[i] = Class.forName(argTypes[i]);
+			}
+			Constructor<?> constructor = Class.forName(clazzName).getConstructor(types);
+			constructor.setAccessible(true);
+			return constructor.newInstance(constructorArgs);
+		} catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 	public static String getNmsPackage() {
 		return nmsPackage;
 	}
@@ -52,6 +67,16 @@ public class ReflectionUtils {
 			field.setAccessible(true);
 			return field.get(object);
 		} catch (IllegalAccessException | NoSuchFieldException e) {
+			return null;
+		}
+	}
+	public static Object getStaticField(String clazzName, String fieldName) {
+		try {
+			Class<?> clazz = Class.forName(clazzName);
+			Field field = clazz.getDeclaredField(fieldName);
+			field.setAccessible(true);
+			return field.get(null);
+		} catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
 			return null;
 		}
 	}
