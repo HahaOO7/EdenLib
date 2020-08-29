@@ -24,11 +24,11 @@ public class PluginTools extends JavaPlugin implements @NotNull Listener {
 		sqlitePlayerStorage = new SqlitePlayerStorage(this);
 		if (cfg.getBoolean("storage.mySql.use", false))
 			mySqlPlayerStorage = new MySqlPlayerStorage(
-				cfg.getString("host"),
-				cfg.getString("username"),
-				cfg.getString("password"),
-				cfg.getString("database"),
-				cfg.getBoolean("useSSL")
+				cfg.getString("storage.mySql.host"),
+				cfg.getString("storage.mySql.username"),
+				cfg.getString("storage.mySql.password"),
+				cfg.getString("storage.mySql.database"),
+				cfg.getBoolean("storage.mySql.useSSL")
 			);
 		getLogger().info(" loaded!");
 
@@ -48,6 +48,7 @@ public class PluginTools extends JavaPlugin implements @NotNull Listener {
 		String name = event.getPlayer().getName();
 		UUID uuid = event.getPlayer().getUniqueId();
 		Bukkit.getScheduler().runTaskAsynchronously(this, () -> sqlitePlayerStorage.saveUUID(name, uuid));
-		Bukkit.getScheduler().runTaskAsynchronously(this, () -> mySqlPlayerStorage.saveUUID(name, uuid));
+		if (mySqlPlayerStorage != null)
+			Bukkit.getScheduler().runTaskAsynchronously(this, () -> mySqlPlayerStorage.saveUUID(name, uuid));
 	}
 }

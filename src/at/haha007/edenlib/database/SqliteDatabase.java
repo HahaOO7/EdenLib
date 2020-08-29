@@ -13,14 +13,14 @@ public class SqliteDatabase extends SqlDatabase {
 
 	public SqliteDatabase(JavaPlugin plugin, String path) {
 		File file = new File(plugin.getDataFolder(), path);
-		if(!file.exists()) {
+		if (!file.exists()) {
 			try {
 				file.createNewFile();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-		this.path = file.getAbsolutePath();
+		this.path = path;
 	}
 
 	public void connect() throws SQLException {
