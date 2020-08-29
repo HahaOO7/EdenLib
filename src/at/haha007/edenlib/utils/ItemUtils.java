@@ -102,8 +102,10 @@ public class ItemUtils {
 		Object flag = ReflectionUtils.invokeMethod(tag, "getInt", "HideFlags");
 		if (flag == null) return item;
 		ReflectionUtils.invokeMethod(tag, "setInt", "HideFlags", (int) flag % 2 == 0 ? (int) flag + 1 : (int) flag - 1);
-
-		//TODO
+		Object enchantments = ReflectionUtils.invokeMethod(tag, "getList", "Enchantments");
+		if (enchantments == null)
+			enchantments = ReflectionUtils.newInstance(ReflectionUtils.getNmsPackage() + ".NBTTagList");
+		ReflectionUtils.invokeMethod(tag, "set", "Enchantments", enchantments);
 		return (ItemStack) ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asCraftMirror", nmsItem);
 	}
 
