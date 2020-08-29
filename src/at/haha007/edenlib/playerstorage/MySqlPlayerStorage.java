@@ -22,9 +22,9 @@ public class MySqlPlayerStorage implements PerPlayerStorage {
 	public MySqlPlayerStorage(String host, String username, String password, String databaseName, boolean useSSL) {
 		database = new MySqlDatabase(host, username, password, databaseName, useSSL);
 		try {
+			database.connect();
 			database.prepareStatement("CREATE TABLE IF NOT EXISTS `UuidNames` (UUID VARCHAR(36), Name VARCHAR(16), PRIMARY KEY(Name, UUID))").executeUpdate();
 			database.prepareStatement("CREATE TABLE IF NOT EXISTS `PerPlayerStorage` (UUID VARCHAR(36), Config BLOB, PRIMARY KEY(UUID))").executeUpdate();
-
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

@@ -21,11 +21,11 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 	private final SqlDatabase database;
 
 	public SqlitePlayerStorage(JavaPlugin plugin) {
-		database = new SqliteDatabase(plugin, "players");
+		database = new SqliteDatabase(plugin, "players.db");
 		try {
+			database.connect();
 			database.prepareStatement("CREATE TABLE IF NOT EXISTS `UuidNames` (UUID VARCHAR(36), Name VARCHAR(16), PRIMARY KEY(Name, UUID))").executeUpdate();
 			database.prepareStatement("CREATE TABLE IF NOT EXISTS `PerPlayerStorage` (UUID VARCHAR(36), Config BLOB, PRIMARY KEY(UUID))").executeUpdate();
-
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

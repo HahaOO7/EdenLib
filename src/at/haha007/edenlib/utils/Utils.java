@@ -19,6 +19,33 @@ import static at.haha007.edenlib.utils.ReflectionUtils.*;
 
 public class Utils {
 	private static final Random rand = new Random();
+	private static final Class<?> packetPlayOutEntityMetadataClass;
+	private static final Class<?> packetPlayOutSpawnEntityLivingClass;
+	private static final Class<?> dataWatcherClass;
+	private static final Class<?> dataWatcherRegistryClass;
+	private static final Class<?> entityClass;
+	private static final Class<?> dataWatcherObjectClass;
+	private static final Class<?> dataWatcherSerializerClass;
+	private static final Class<?> packetPlayOutEntityDestroyClass;
+
+	static {
+		packetPlayOutEntityDestroyClass = getNmsClass("PacketPlayOutEntityDestroy");
+		dataWatcherSerializerClass = getNmsClass("DataWatcherSerializer");
+		dataWatcherObjectClass = getNmsClass("DataWatcherObject");
+		entityClass = getNmsClass("Entity");
+		dataWatcherRegistryClass = getNmsClass("DataWatcherRegistry");
+		dataWatcherClass = getNmsClass("DataWatcher");
+		packetPlayOutEntityMetadataClass = getNmsClass("PacketPlayOutEntityMetadata");
+		packetPlayOutSpawnEntityLivingClass = getNmsClass("PacketPlayOutSpawnEntityLiving");
+		assert packetPlayOutEntityMetadataClass != null;
+		assert packetPlayOutEntityDestroyClass != null;
+		assert dataWatcherSerializerClass != null;
+		assert packetPlayOutSpawnEntityLivingClass != null;
+		assert dataWatcherClass != null;
+		assert dataWatcherObjectClass != null;
+		assert entityClass != null;
+		assert dataWatcherRegistryClass != null;
+	}
 
 	public static String combineStrings(int startIndex, int endIndex, String... strings) {
 		StringBuilder string = new StringBuilder();
@@ -70,17 +97,17 @@ public class Utils {
 	}
 
 	public static void sendPacket(Player player, Object nmsPacket) {
-		Object nmsPlayer = getField(player, "entity");
+		Object nmsPlayer = invokeMethod(player, "getHandle", new Class[0], new Object[0]);
 		if (nmsPlayer == null) return;
 		Object nmsPlayerConnection = getField(nmsPlayer, "playerConnection");
 		if (nmsPlayerConnection == null) return;
-		invokeMethod(nmsPlayerConnection, "sendPacket", nmsPacket);
+		invokeMethod(nmsPlayerConnection, "sendPacket", new Class[]{getNmsClass("Packet")}, new Object[]{nmsPacket});
 	}
 
 	public static void guardianBeam(Player player, Vector from, Vector to, int guardianId, int armorstandId) {
 
 		{
-			Object packet = newInstance(getNmsPackage() + ".PacketPlayOutSpawnEntityLiving");
+			Object packet = newInstance(packetPlayOutSpawnEntityLivingClass, new Class[0], new Object[0]);
 			setField(packet, "a", armorstandId);
 			setField(packet, "b", UUID.randomUUID());
 			// entity type
@@ -89,6 +116,21 @@ public class Utils {
 			setField(packet, "d", to.getX());
 			setField(packet, "e", to.getY());
 			setField(packet, "f", to.getZ());
+			sendPacket(player, packet);
+		}
+		{
+			Object dataWatcher = newInstance(
+				dataWatcherClass,
+				new Class[]{entityClass},
+				new Object[]{null});
+			if (dataWatcher == null) return;
+
+			registerDataWatcher(dataWatcher, 0, "a", (byte) 0b00100000);
+			registerDataWatcher(dataWatcher, 4, "i", true);
+			registerDataWatcher(dataWatcher, 5, "i", true);
+			registerDataWatcher(dataWatcher, 14, "a", (byte) 0b00010000);
+
+			Object packet = newInstance(packetPlayOutEntityMetadataClass, new Class[]{int.class, dataWatcherClass, boolean.class}, new Object[]{armorstandId, dataWatcher, true});
 			sendPacket(player, packet);
 		}
 
@@ -111,42 +153,35 @@ public class Utils {
 		}
 		{
 			Object dataWatcher = newInstance(
-				getNmsPackage() + ".DataWatcher",
-				new String[]{getNmsPackage() + ".Entity"},
+				dataWatcherClass,
+				new Class[]{entityClass},
 				new Object[]{null});
 			if (dataWatcher == null) return;
 
-			invokeMethod(dataWatcher,
-				"register",
-				newInstance(getNmsPackage() + "DataWatcherObject", 0,
-					getStaticField(getNmsPackage() + ".DataWatcherRegistry", "a")),
-				(byte) 0b00100000);
+			registerDataWatcher(dataWatcher, 0, "a", (byte) 0b00100000);
+			registerDataWatcher(dataWatcher, 4, "i", true);
+			registerDataWatcher(dataWatcher, 5, "i", true);
+			registerDataWatcher(dataWatcher, 16, "b", targetId);
 
-			invokeMethod(dataWatcher,
-				"register",
-				newInstance(getNmsPackage() + "DataWatcherObject", 4,
-					getStaticField(getNmsPackage() + ".DataWatcherRegistry", "i")),
-				true);
-
-			invokeMethod(dataWatcher,
-				"register",
-				newInstance(getNmsPackage() + "DataWatcherObject", 5,
-					getStaticField(getNmsPackage() + ".DataWatcherRegistry", "i")),
-				true);
-
-			invokeMethod(dataWatcher,
-				"register",
-				newInstance(getNmsPackage() + "DataWatcherObject", 16,
-					getStaticField(getNmsPackage() + ".DataWatcherRegistry", "b")),
-				targetId);
-
-			Object packet = newInstance(getNmsPackage() + ".PacketPlayOutEntityMetadata", guardianId, dataWatcher, true);
+			Object packet = newInstance(packetPlayOutEntityMetadataClass, new Class[]{int.class, dataWatcherClass, boolean.class}, new Object[]{guardianId, dataWatcher, true});
 			sendPacket(player, packet);
 		}
 	}
 
-	public void destroyFakeEntity(Player player, int entityId) {
-		Object packet = newInstance(getNmsPackage() + ".PacketPlayOutEntityDestroy", entityId);
+	private static void registerDataWatcher(Object dataWatcher, int target, String serializer, Object value) {
+		Object dwSerializer = getStaticField(dataWatcherRegistryClass, serializer);
+		Object dwObject = newInstance(
+			dataWatcherObjectClass,
+			new Class[]{int.class, dataWatcherSerializerClass}, new Object[]{target, dwSerializer});
+		invokeMethod(
+			dataWatcher,
+			"register",
+			new Class[]{dataWatcherObjectClass, Object.class},
+			new Object[]{dwObject, value});
+	}
+
+	public static void destroyFakeEntity(Player player, int... entityIds) {
+		Object packet = newInstance(packetPlayOutEntityDestroyClass, new Class[]{int[].class}, new Object[]{entityIds});
 		sendPacket(player, packet);
 	}
 }
