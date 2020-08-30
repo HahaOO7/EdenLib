@@ -9,9 +9,35 @@ import java.lang.reflect.Method;
 
 public class ReflectionUtils {
 	private static final String nmsPackage;
+	private static final String craftBukkitPackage;
 
 	static {
 		nmsPackage = "net.minecraft.server." + Bukkit.getServer().getClass().getPackage().getName().replace(".", ",").split(",")[3];
+		craftBukkitPackage = "org.bukkit.craftbukkit." + Bukkit.getServer().getClass().getPackage().getName().replace(".", ",").split(",")[3];
+	}
+
+	public static String getNmsPackage() {
+		return nmsPackage;
+	}
+
+	public static Class<?> getNmsClass(String name) {
+		try {
+			return Class.forName(getNmsPackage() + "." + name);
+		} catch (ClassNotFoundException e) {
+			return null;
+		}
+	}
+
+	public static String getCraftBukkitPackage() {
+		return craftBukkitPackage;
+	}
+
+	public static Class<?> getCraftBukkitClass(String name) {
+		try {
+			return Class.forName(getCraftBukkitPackage() + "." + name);
+		} catch (ClassNotFoundException e) {
+			return null;
+		}
 	}
 
 	public static void setField(Object object, String fieldName, Object value) {
@@ -27,13 +53,6 @@ public class ReflectionUtils {
 		}
 	}
 
-	public static Class<?> getNmsClass(String name) {
-		try {
-			return Class.forName(getNmsPackage() + "." + name);
-		} catch (ClassNotFoundException e) {
-			return null;
-		}
-	}
 
 	public static Class<?> getClassByName(String name) {
 		try {
@@ -84,9 +103,6 @@ public class ReflectionUtils {
 		return null;
 	}
 
-	public static String getNmsPackage() {
-		return nmsPackage;
-	}
 
 	public static Object getField(Object object, String fieldName) {
 		try {
@@ -122,6 +138,17 @@ public class ReflectionUtils {
 	public static Object invokeMethod(Object object, String methodName, Class<?>[] parameterTypes, Object[] params) {
 		try {
 			Class<?> clazz = object.getClass();
+			Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
+			method.setAccessible(true);
+			return method.invoke(object, params);
+		} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public static Object invokeMethod(Class<?> clazz, Object object, String methodName, Class<?>[] parameterTypes, Object[] params) {
+		try {
 			Method method = clazz.getDeclaredMethod(methodName, parameterTypes);
 			method.setAccessible(true);
 			return method.invoke(object, params);
