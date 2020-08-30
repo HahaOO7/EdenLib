@@ -16,10 +16,19 @@ import static at.haha007.edenlib.utils.ReflectionUtils.*;
 public class ItemUtils {
 	private static final Class<?> gameProfileClass;
 	private static final Class<?> propertyClass;
+	private static final Class<?> craftItemStackClass;
+	private static final Class<?> itemStackClass;
+	private static final Class<?> packetPlayOutSetSlotClass;
 
 	static {
+		packetPlayOutSetSlotClass = getNmsClass("PacketPlayOutSetSlot");
+		itemStackClass = getNmsClass("ItemStack");
+		craftItemStackClass = getCraftBukkitClass("inventory.CraftItemStack");
 		gameProfileClass = getClassByName("com.mojang.authlib.GameProfile");
 		propertyClass = getClassByName("com.mojang.authlib.properties.Property");
+		assert craftItemStackClass != null;
+		assert packetPlayOutSetSlotClass != null;
+		assert itemStackClass != null;
 		assert gameProfileClass != null;
 		assert propertyClass != null;
 	}
@@ -60,7 +69,11 @@ public class ItemUtils {
 	}
 
 	public static Object getNmsStack(ItemStack itemStack) {
-		return invokeStaticMethod(getCraftBukkitClass("inventory.CraftItemStack"), "asNMSCopy", new Class[]{ItemStack.class}, new Object[]{itemStack});
+		return invokeStaticMethod(craftItemStackClass, "asNMSCopy", new Class[]{ItemStack.class}, new Object[]{itemStack});
+	}
+
+	public static Object getBukkitStack(Object nmsItemStack) {
+		return invokeStaticMethod(craftItemStackClass, "asCraftMirror", new Class[]{itemStackClass}, new Object[]{nmsItemStack});
 	}
 
 	public static void giveItem(Player player, ItemStack item) {
@@ -77,7 +90,7 @@ public class ItemUtils {
 		Object nbtTagCompound = invokeMethod(nmsItem, "getOrCreateTag");
 		if (nbtTagCompound == null) return item;
 		invokeMethod(nbtTagCompound, "setString", name, value);
-		return (ItemStack) invokeStaticMethod(getCraftBukkitPackage() + ".inventory.CraftItemStack", "asCraftMirror", nmsItem);
+		return (ItemStack) invokeStaticMethod(craftItemStackClass, "asCraftMirror", new Class[]{itemStackClass}, new Object[]{nmsItem});
 	}
 
 	public static String getNbtString(ItemStack item, String key) {
@@ -96,7 +109,7 @@ public class ItemUtils {
 		Object nbtTagCompound = invokeMethod(nmsItem, "getOrCreateTag");
 		if (nbtTagCompound == null) return item;
 		invokeMethod(nbtTagCompound, "setInt", new Class[]{String.class, int.class}, new Object[]{name, value});
-		return (ItemStack) invokeStaticMethod(getCraftBukkitPackage() + ".inventory.CraftItemStack", "asCraftMirror", nmsItem);
+		return (ItemStack) invokeStaticMethod(craftItemStackClass, "asCraftMirror", new Class[]{itemStackClass}, new Object[]{nmsItem});
 	}
 
 	public static int getNbtInt(ItemStack item, String key) {
@@ -125,7 +138,7 @@ public class ItemUtils {
 	}
 
 	public static void sendFakeItemChange(int slot, Object nmsItemStack, Player player) {
-		Utils.sendPacket(player, newInstance(getNmsClass("PacketPlayOutSetSlot"), new Class[]{int.class, int.class, getNmsClass("ItemStack")}, new Object[]{0, dataSlotToNetworkSlot(0), nmsItemStack}));
+		Utils.sendPacket(player, newInstance(packetPlayOutSetSlotClass, new Class[]{int.class, int.class, getNmsClass("ItemStack")}, new Object[]{0, dataSlotToNetworkSlot(0), nmsItemStack}));
 	}
 
 	public static int dataSlotToNetworkSlot(int index) {

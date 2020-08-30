@@ -1,5 +1,6 @@
 package at.haha007.edenlib.utils;
 
+import net.minecraft.server.v1_16_R2.ChatComponentText;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import org.json.simple.JSONObject;
@@ -10,8 +11,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 import static at.haha007.edenlib.utils.ReflectionUtils.*;
 
@@ -26,11 +26,15 @@ public class Utils {
 	private static final Class<?> dataWatcherSerializerClass;
 	private static final Class<?> packetPlayOutEntityDestroyClass;
 	private static final Class<?> packetPlayOutSpawnEntityClass;
+	private static final Class<?> packetPlayOutScoreboardTeamClass;
 	private static final Class<?> entityTypesClass;
 	private static final Class<?> hexClass;
+	private static final Class<?> blockClass;
+	private static final Class<?> iBlockDataClass;
 
 	static {
 		hexClass = getClassByName("org.bukkit.craftbukkit.libs.org.apache.commons.codec.binary.Hex");
+		packetPlayOutScoreboardTeamClass = getNmsClass("PacketPlayOutScoreboardTeam");
 		packetPlayOutEntityDestroyClass = getNmsClass("PacketPlayOutEntityDestroy");
 		dataWatcherSerializerClass = getNmsClass("DataWatcherSerializer");
 		dataWatcherObjectClass = getNmsClass("DataWatcherObject");
@@ -41,6 +45,10 @@ public class Utils {
 		packetPlayOutSpawnEntityLivingClass = getNmsClass("PacketPlayOutSpawnEntityLiving");
 		packetPlayOutSpawnEntityClass = getNmsClass("PacketPlayOutSpawnEntity");
 		entityTypesClass = getNmsClass("EntityTypes");
+		blockClass = getNmsClass("Block");
+		iBlockDataClass = getNmsClass("IBlockData");
+		assert blockClass != null;
+		assert iBlockDataClass != null;
 		assert entityTypesClass != null;
 		assert packetPlayOutEntityMetadataClass != null;
 		assert packetPlayOutEntityDestroyClass != null;
@@ -52,6 +60,7 @@ public class Utils {
 		assert dataWatcherRegistryClass != null;
 		assert packetPlayOutSpawnEntityClass != null;
 		assert hexClass != null;
+		assert packetPlayOutScoreboardTeamClass != null;
 	}
 
 	public static String combineStrings(int startIndex, int endIndex, String... strings) {
@@ -114,21 +123,44 @@ public class Utils {
 		invokeMethod(nmsPlayerConnection, "sendPacket", new Class[]{getNmsClass("Packet")}, new Object[]{nmsPacket});
 	}
 
-	public static void displayFakeBlock(Player player, Vector location, Object block, int entityId) {
+	public static void displayFakeBlock(Player player, Vector location, Object block, int entityId, UUID entityUUID) {
 		//block is in nms Blocks
-
+		Object blockData = invokeMethod(blockClass, block, "getBlockData", new Class[0], new Object[0]);
 		Object packet = newInstance(packetPlayOutSpawnEntityClass, new Class[]{}, new Object[]{});
 		if (packet == null) return;
 		setField(packet, "a", entityId);
-		setField(packet, "b", UUID.randomUUID());
+		setField(packet, "b", entityUUID);
 		// pos
 		setField(packet, "c", location.getX());
 		setField(packet, "d", location.getY());
 		setField(packet, "e", location.getZ());
 		// entity type
 		setField(packet, "k", getStaticField(entityTypesClass, "FALLING_BLOCK"));
-		setField(packet, "l", invokeMethod(block, "getBlockData"));
+		setField(packet, "l", invokeStaticMethod(blockClass, "getCombinedId", new Class[]{iBlockDataClass}, new Object[]{blockData}));
 		sendPacket(player, packet);
+	}
+
+	public static void addGlow(Player player, int entityId) {
+		Object dataWatcher = newInstance(dataWatcherClass, new Class[]{entityClass}, new Object[]{null});
+		registerDataWatcher(dataWatcher, 0, "a", (byte) 0b01000000);
+		registerDataWatcher(dataWatcher, 5, "i", true);
+		Object packet = newInstance(packetPlayOutEntityMetadataClass, new Class[]{int.class, dataWatcherClass, boolean.class}, new Object[]{entityId, dataWatcher, true});
+		sendPacket(player, packet);
+	}
+
+	public static void colorClow(Player player, Object enumChatFormatColor, UUID... entityUUID) {
+		Object packetRed = newInstance(packetPlayOutScoreboardTeamClass, new Class[0], new Object[0]);
+		setField(packetRed, "a", getRandomString(16)); // name
+		setField(packetRed, "b", new ChatComponentText("")); // display name
+		setField(packetRed, "c", new ChatComponentText("PRE ")); // prefix
+		setField(packetRed, "d", new ChatComponentText(" SUF")); // suffix
+		setField(packetRed, "e", "never"); // name tag visible
+		setField(packetRed, "f", "never"); // collision rule
+		setField(packetRed, "g", enumChatFormatColor); // team color
+		setField(packetRed, "h", Arrays.stream(entityUUID).map(UUID::toString).collect(HashSet::new, Set::add, Set::addAll)); // entities
+		setField(packetRed, "i", 0); // packet type crete team
+		setField(packetRed, "j", 1); // entity count?
+		sendPacket(player, packetRed);
 	}
 
 	public static void guardianBeam(Player player, Vector from, Vector to, int guardianId, int armorstandId) {
