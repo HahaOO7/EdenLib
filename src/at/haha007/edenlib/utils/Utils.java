@@ -1,7 +1,5 @@
 package at.haha007.edenlib.utils;
 
-import org.bukkit.craftbukkit.libs.org.apache.commons.codec.DecoderException;
-import org.bukkit.craftbukkit.libs.org.apache.commons.codec.binary.Hex;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import org.json.simple.JSONObject;
@@ -29,8 +27,10 @@ public class Utils {
 	private static final Class<?> packetPlayOutEntityDestroyClass;
 	private static final Class<?> packetPlayOutSpawnEntityClass;
 	private static final Class<?> entityTypesClass;
+	private static final Class<?> hexClass;
 
 	static {
+		hexClass = getClassByName("org.bukkit.craftbukkit.libs.org.apache.commons.codec.binary.Hex");
 		packetPlayOutEntityDestroyClass = getNmsClass("PacketPlayOutEntityDestroy");
 		dataWatcherSerializerClass = getNmsClass("DataWatcherSerializer");
 		dataWatcherObjectClass = getNmsClass("DataWatcherObject");
@@ -51,6 +51,7 @@ public class Utils {
 		assert entityClass != null;
 		assert dataWatcherRegistryClass != null;
 		assert packetPlayOutSpawnEntityClass != null;
+		assert hexClass != null;
 	}
 
 	public static String combineStrings(int startIndex, int endIndex, String... strings) {
@@ -77,9 +78,12 @@ public class Utils {
 		try {
 			JSONObject json = readJsonFromUrl("https://api.mojang.com/users/profiles/minecraft/" + name);
 			String uuidString = json.get("id").toString();
-			byte[] data = Hex.decodeHex(uuidString.toCharArray());
+			byte[] data = (byte[]) invokeStaticMethod(hexClass,
+				"decodeHex",
+				new Class[]{char[].class},
+				new Object[]{uuidString.toCharArray()});
 			return new UUID(ByteBuffer.wrap(data, 0, 8).getLong(), ByteBuffer.wrap(data, 8, 8).getLong());
-		} catch (IOException | ParseException | DecoderException e) {
+		} catch (IOException | ParseException e) {
 			return null;
 		}
 	}

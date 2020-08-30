@@ -35,6 +35,14 @@ public class ReflectionUtils {
 		}
 	}
 
+	public static Class<?> getClassByName(String name) {
+		try {
+			return Class.forName(name);
+		} catch (ClassNotFoundException e) {
+			return null;
+		}
+	}
+
 	public static Object newInstance(String clazzName, Object... constructorArgs) {
 		try {
 			Class<?>[] parametarTypes = new Class[constructorArgs.length];
@@ -133,6 +141,17 @@ public class ReflectionUtils {
 			Method method = clazz.getDeclaredMethod(methodName, argTypes);
 			method.setAccessible(true);
 			return method.invoke(object, args);
+		} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public static Object invokeStaticMethod(Class<?> clazz, String methodName, Class<?>[] types, Object[] params) {
+		try {
+			Method method = clazz.getDeclaredMethod(methodName, types);
+			method.setAccessible(true);
+			return method.invoke(null, params);
 		} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
 			e.printStackTrace();
 			return null;

@@ -1,7 +1,5 @@
 package at.haha007.edenlib.utils;
 
-import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.properties.Property;
 import org.bukkit.Material;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -13,13 +11,26 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 public class ItemUtils {
+	private static final Class<?> gameProfileClass;
+	private static final Class<?> propertyClass;
+
+	static {
+		gameProfileClass = ReflectionUtils.getClassByName("com.mojang.authlib.GameProfile");
+		propertyClass = ReflectionUtils.getClassByName("com.mojang.authlib.properties.Property");
+		assert gameProfileClass != null;
+		assert propertyClass != null;
+	}
 
 	public static ItemStack getSkull(String texture) {
 		ItemStack item = new ItemStack(Material.PLAYER_HEAD);
 
 		SkullMeta itemMeta = (SkullMeta) item.getItemMeta();
-		GameProfile profile = new GameProfile(UUID.randomUUID(), null);
-		profile.getProperties().put("textures", new Property("textures", texture));
+		Object profile = ReflectionUtils.newInstance(gameProfileClass, new Class[]{UUID.class, String.class}, new Object[]{UUID.randomUUID(), null});
+		if (profile == null) return null;
+		Object properties = ReflectionUtils.invokeMethod(profile, "getProperties");
+		if (properties == null) return null;
+		Object property = ReflectionUtils.newInstance(propertyClass, new Class[]{String.class, String.class}, new Object[]{"textures", texture});
+		ReflectionUtils.invokeMethod(properties, "put", new Class[]{propertyClass}, new Object[]{property});
 		try {
 			Field profileField = itemMeta.getClass().getDeclaredField("profile");
 			profileField.setAccessible(true);
