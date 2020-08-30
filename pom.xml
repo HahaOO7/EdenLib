@@ -9,6 +9,8 @@
 	<name>EdenLib</name>
 	<properties>
 		<mcVersion>1.16.2-R0.1-SNAPSHOT</mcVersion>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
 	</properties>
 	<repositories>
 		<repository>

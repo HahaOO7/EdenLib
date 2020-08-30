@@ -27,6 +27,8 @@ public class Utils {
 	private static final Class<?> dataWatcherObjectClass;
 	private static final Class<?> dataWatcherSerializerClass;
 	private static final Class<?> packetPlayOutEntityDestroyClass;
+	private static final Class<?> packetPlayOutSpawnEntityClass;
+	private static final Class<?> entityTypesClass;
 
 	static {
 		packetPlayOutEntityDestroyClass = getNmsClass("PacketPlayOutEntityDestroy");
@@ -37,6 +39,9 @@ public class Utils {
 		dataWatcherClass = getNmsClass("DataWatcher");
 		packetPlayOutEntityMetadataClass = getNmsClass("PacketPlayOutEntityMetadata");
 		packetPlayOutSpawnEntityLivingClass = getNmsClass("PacketPlayOutSpawnEntityLiving");
+		packetPlayOutSpawnEntityClass = getNmsClass("PacketPlayOutSpawnEntity");
+		entityTypesClass = getNmsClass("EntityTypes");
+		assert entityTypesClass != null;
 		assert packetPlayOutEntityMetadataClass != null;
 		assert packetPlayOutEntityDestroyClass != null;
 		assert dataWatcherSerializerClass != null;
@@ -45,6 +50,7 @@ public class Utils {
 		assert dataWatcherObjectClass != null;
 		assert entityClass != null;
 		assert dataWatcherRegistryClass != null;
+		assert packetPlayOutSpawnEntityClass != null;
 	}
 
 	public static String combineStrings(int startIndex, int endIndex, String... strings) {
@@ -104,10 +110,28 @@ public class Utils {
 		invokeMethod(nmsPlayerConnection, "sendPacket", new Class[]{getNmsClass("Packet")}, new Object[]{nmsPacket});
 	}
 
+	public static void displayFakeBlock(Player player, Vector location, Object block, int entityId) {
+		//block is in nms Blocks
+
+		Object packet = newInstance(packetPlayOutSpawnEntityClass, new Class[]{}, new Object[]{});
+		if (packet == null) return;
+		setField(packet, "a", entityId);
+		setField(packet, "b", UUID.randomUUID());
+		// pos
+		setField(packet, "c", location.getX());
+		setField(packet, "d", location.getY());
+		setField(packet, "e", location.getZ());
+		// entity type
+		setField(packet, "k", getStaticField(entityTypesClass, "FALLING_BLOCK"));
+		setField(packet, "l", invokeMethod(block, "getBlockData"));
+		sendPacket(player, packet);
+	}
+
 	public static void guardianBeam(Player player, Vector from, Vector to, int guardianId, int armorstandId) {
 
 		{
 			Object packet = newInstance(packetPlayOutSpawnEntityLivingClass, new Class[0], new Object[0]);
+			if (packet == null) return;
 			setField(packet, "a", armorstandId);
 			setField(packet, "b", UUID.randomUUID());
 			// entity type
@@ -134,13 +158,14 @@ public class Utils {
 			sendPacket(player, packet);
 		}
 
-		guardianBeamExisting(player, from, to, guardianId, armorstandId);
+		guardianBeamExisting(player, from, guardianId, armorstandId);
 	}
 
-	public static void guardianBeamExisting(Player player, Vector from, Vector to, int guardianId, int targetId) {
+	public static void guardianBeamExisting(Player player, Vector from, int guardianId, int targetId) {
 		//shoots an existing target
 		{
 			Object packet = newInstance(getNmsPackage() + ".PacketPlayOutSpawnEntityLiving");
+			if (packet == null) return;
 			setField(packet, "a", guardianId);
 			setField(packet, "b", UUID.randomUUID());
 			// entity type
