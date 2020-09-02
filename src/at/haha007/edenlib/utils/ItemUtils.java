@@ -138,7 +138,7 @@ public class ItemUtils {
 	}
 
 	public static void sendFakeItemChange(int slot, Object nmsItemStack, Player player) {
-		Utils.sendPacket(player, newInstance(packetPlayOutSetSlotClass, new Class[]{int.class, int.class, getNmsClass("ItemStack")}, new Object[]{0, dataSlotToNetworkSlot(0), nmsItemStack}));
+		Utils.sendPacket(player, newInstance(packetPlayOutSetSlotClass, new Class[]{int.class, int.class, itemStackClass}, new Object[]{0, dataSlotToNetworkSlot(slot), nmsItemStack}));
 	}
 
 	public static int dataSlotToNetworkSlot(int index) {

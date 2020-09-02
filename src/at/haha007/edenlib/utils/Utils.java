@@ -11,7 +11,11 @@ import java.io.*;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Random;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static at.haha007.edenlib.utils.ReflectionUtils.*;
 
@@ -148,7 +152,7 @@ public class Utils {
 		sendPacket(player, packet);
 	}
 
-	public static void colorClow(Player player, Object enumChatFormatColor, UUID... entityUUID) {
+	public static void colorGlow(Player player, Object enumChatFormatColor, UUID... entityUUID) {
 		Object packetRed = newInstance(packetPlayOutScoreboardTeamClass, new Class[0], new Object[0]);
 		setField(packetRed, "a", getRandomString(16)); // name
 		setField(packetRed, "b", new ChatComponentText("")); // display name
@@ -157,9 +161,9 @@ public class Utils {
 		setField(packetRed, "e", "never"); // name tag visible
 		setField(packetRed, "f", "never"); // collision rule
 		setField(packetRed, "g", enumChatFormatColor); // team color
-		setField(packetRed, "h", Arrays.stream(entityUUID).map(UUID::toString).collect(HashSet::new, Set::add, Set::addAll)); // entities
+		setField(packetRed, "h", Arrays.stream(entityUUID).map(UUID::toString).collect(Collectors.toCollection(ArrayList::new))); // entities
 		setField(packetRed, "i", 0); // packet type crete team
-		setField(packetRed, "j", 1); // entity count?
+		setField(packetRed, "j", entityUUID.length); // entity count?
 		sendPacket(player, packetRed);
 	}
 
