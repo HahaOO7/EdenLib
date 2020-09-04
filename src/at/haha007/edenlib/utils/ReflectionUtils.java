@@ -40,7 +40,7 @@ public class ReflectionUtils {
 		}
 	}
 
-	public static void setField(Object object, String fieldName, Object value) {
+	public static void setFieldValue(Object object, String fieldName, Object value) {
 		try {
 			Class<?> clazz = object.getClass();
 			Field field = clazz.getDeclaredField(fieldName);
@@ -49,6 +49,17 @@ public class ReflectionUtils {
 			field.set(object, value);
 			field.setAccessible(a);
 		} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void setFieldValue(Object object, Field field, Object value) {
+		try {
+			boolean a = field.isAccessible();
+			field.setAccessible(true);
+			field.set(object, value);
+			field.setAccessible(a);
+		} catch (IllegalArgumentException | IllegalAccessException | SecurityException e) {
 			e.printStackTrace();
 		}
 	}
@@ -104,7 +115,7 @@ public class ReflectionUtils {
 	}
 
 
-	public static Object getField(Object object, String fieldName) {
+	public static Object getFieldValue(Object object, String fieldName) {
 		try {
 			Field field = object.getClass().getDeclaredField(fieldName);
 			field.setAccessible(true);
@@ -114,7 +125,16 @@ public class ReflectionUtils {
 		}
 	}
 
-	public static Object getStaticField(String clazzName, String fieldName) {
+	public static Object getFieldValue(Object object, Field field) {
+		try {
+			field.setAccessible(true);
+			return field.get(object);
+		} catch (IllegalAccessException e) {
+			return null;
+		}
+	}
+
+	public static Object getStaticFieldValue(String clazzName, String fieldName) {
 		try {
 			Class<?> clazz = Class.forName(clazzName);
 			Field field = clazz.getDeclaredField(fieldName);
@@ -125,12 +145,30 @@ public class ReflectionUtils {
 		}
 	}
 
-	public static Object getStaticField(Class<?> clazz, String fieldName) {
+	public static Object getStaticFieldValue(Class<?> clazz, String fieldName) {
 		try {
 			Field field = clazz.getDeclaredField(fieldName);
 			field.setAccessible(true);
 			return field.get(null);
 		} catch (IllegalAccessException | NoSuchFieldException e) {
+			return null;
+		}
+	}
+
+	public static Method getMethod(Class<?> clazz, String name, Class<?>... parameterTypes) {
+		try {
+			return clazz.getDeclaredMethod(name, parameterTypes);
+		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public static Field getField(Class<?> clazz, String name) {
+		try {
+			return clazz.getDeclaredField(name);
+		} catch (NoSuchFieldException e) {
+			e.printStackTrace();
 			return null;
 		}
 	}
@@ -169,6 +207,26 @@ public class ReflectionUtils {
 			method.setAccessible(true);
 			return method.invoke(object, args);
 		} catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public static Object invokeMethod(Object object, Method method, Object... params) {
+		try {
+			method.setAccessible(true);
+			return method.invoke(object, params);
+		} catch (IllegalAccessException | InvocationTargetException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public static Object invokeStaticMethod(Method method, Object... params) {
+		try {
+			method.setAccessible(true);
+			return method.invoke(null, params);
+		} catch (IllegalAccessException | InvocationTargetException e) {
 			e.printStackTrace();
 			return null;
 		}

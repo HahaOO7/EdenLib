@@ -1,6 +1,8 @@
 package at.haha007.edenlib.utils;
 
 import net.minecraft.server.v1_16_R2.ChatComponentText;
+import org.bukkit.craftbukkit.libs.org.apache.commons.codec.DecoderException;
+import org.bukkit.craftbukkit.libs.org.apache.commons.codec.binary.Hex;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import org.json.simple.JSONObject;
@@ -8,6 +10,8 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -32,12 +36,48 @@ public class Utils {
 	private static final Class<?> packetPlayOutSpawnEntityClass;
 	private static final Class<?> packetPlayOutScoreboardTeamClass;
 	private static final Class<?> entityTypesClass;
-	private static final Class<?> hexClass;
 	private static final Class<?> blockClass;
 	private static final Class<?> iBlockDataClass;
 
+	private static final Field packetPlayOutSpawnEntityA;
+	private static final Field packetPlayOutSpawnEntityB;
+	private static final Field packetPlayOutSpawnEntityC;
+	private static final Field packetPlayOutSpawnEntityD;
+	private static final Field packetPlayOutSpawnEntityE;
+	private static final Field packetPlayOutSpawnEntityK;
+	private static final Field packetPlayOutSpawnEntityL;
+
+	private static final Field packetPlayOutScoreboardTeamA;
+	private static final Field packetPlayOutScoreboardTeamB;
+	private static final Field packetPlayOutScoreboardTeamC;
+	private static final Field packetPlayOutScoreboardTeamD;
+	private static final Field packetPlayOutScoreboardTeamE;
+	private static final Field packetPlayOutScoreboardTeamF;
+	private static final Field packetPlayOutScoreboardTeamG;
+	private static final Field packetPlayOutScoreboardTeamH;
+	private static final Field packetPlayOutScoreboardTeamI;
+	private static final Field packetPlayOutScoreboardTeamJ;
+
+	private static final Field packetPlayOutSpawnEntityLivingA;
+	private static final Field packetPlayOutSpawnEntityLivingB;
+	private static final Field packetPlayOutSpawnEntityLivingC;
+	private static final Field packetPlayOutSpawnEntityLivingD;
+	private static final Field packetPlayOutSpawnEntityLivingE;
+	private static final Field packetPlayOutSpawnEntityLivingF;
+
+	private static final Object dataWatcherSerializerA;
+	private static final Object dataWatcherSerializerB;
+	private static final Object dataWatcherSerializerI;
+
+	private static final Method blockGetCombinedID;
+	private static final Method blockGetBlockData;
+
+	private static final Method dataWatcherRegister;
+
+
+	private static final Object fallingBlockEntityType;
+
 	static {
-		hexClass = getClassByName("org.bukkit.craftbukkit.libs.org.apache.commons.codec.binary.Hex");
 		packetPlayOutScoreboardTeamClass = getNmsClass("PacketPlayOutScoreboardTeam");
 		packetPlayOutEntityDestroyClass = getNmsClass("PacketPlayOutEntityDestroy");
 		dataWatcherSerializerClass = getNmsClass("DataWatcherSerializer");
@@ -63,8 +103,45 @@ public class Utils {
 		assert entityClass != null;
 		assert dataWatcherRegistryClass != null;
 		assert packetPlayOutSpawnEntityClass != null;
-		assert hexClass != null;
 		assert packetPlayOutScoreboardTeamClass != null;
+
+		packetPlayOutSpawnEntityA = getField(packetPlayOutSpawnEntityClass, "a");
+		packetPlayOutSpawnEntityB = getField(packetPlayOutSpawnEntityClass, "b");
+		packetPlayOutSpawnEntityC = getField(packetPlayOutSpawnEntityClass, "c");
+		packetPlayOutSpawnEntityD = getField(packetPlayOutSpawnEntityClass, "d");
+		packetPlayOutSpawnEntityE = getField(packetPlayOutSpawnEntityClass, "e");
+		packetPlayOutSpawnEntityK = getField(packetPlayOutSpawnEntityClass, "k");
+		packetPlayOutSpawnEntityL = getField(packetPlayOutSpawnEntityClass, "l");
+
+		packetPlayOutScoreboardTeamA = getField(packetPlayOutScoreboardTeamClass, "a");
+		packetPlayOutScoreboardTeamB = getField(packetPlayOutScoreboardTeamClass, "b");
+		packetPlayOutScoreboardTeamC = getField(packetPlayOutScoreboardTeamClass, "c");
+		packetPlayOutScoreboardTeamD = getField(packetPlayOutScoreboardTeamClass, "d");
+		packetPlayOutScoreboardTeamE = getField(packetPlayOutScoreboardTeamClass, "e");
+		packetPlayOutScoreboardTeamF = getField(packetPlayOutScoreboardTeamClass, "f");
+		packetPlayOutScoreboardTeamG = getField(packetPlayOutScoreboardTeamClass, "g");
+		packetPlayOutScoreboardTeamH = getField(packetPlayOutScoreboardTeamClass, "h");
+		packetPlayOutScoreboardTeamI = getField(packetPlayOutScoreboardTeamClass, "i");
+		packetPlayOutScoreboardTeamJ = getField(packetPlayOutScoreboardTeamClass, "j");
+
+		packetPlayOutSpawnEntityLivingA = getField(packetPlayOutSpawnEntityLivingClass, "a");
+		packetPlayOutSpawnEntityLivingB = getField(packetPlayOutSpawnEntityLivingClass, "b");
+		packetPlayOutSpawnEntityLivingC = getField(packetPlayOutSpawnEntityLivingClass, "c");
+		packetPlayOutSpawnEntityLivingD = getField(packetPlayOutSpawnEntityLivingClass, "d");
+		packetPlayOutSpawnEntityLivingE = getField(packetPlayOutSpawnEntityLivingClass, "e");
+		packetPlayOutSpawnEntityLivingF = getField(packetPlayOutSpawnEntityLivingClass, "f");
+
+		blockGetCombinedID = getMethod(blockClass, "getCombinedId", iBlockDataClass);
+		blockGetBlockData = getMethod(blockClass, "getBlockData");
+
+		dataWatcherRegister = getMethod(dataWatcherClass, "register", dataWatcherObjectClass, Object.class);
+
+		dataWatcherSerializerA = getStaticFieldValue(dataWatcherRegistryClass, "a");
+		dataWatcherSerializerB = getStaticFieldValue(dataWatcherRegistryClass, "b");
+		dataWatcherSerializerI = getStaticFieldValue(dataWatcherRegistryClass, "i");
+
+
+		fallingBlockEntityType = getStaticFieldValue(entityTypesClass, "FALLING_BLOCK");
 	}
 
 	public static String combineStrings(int startIndex, int endIndex, String... strings) {
@@ -91,12 +168,9 @@ public class Utils {
 		try {
 			JSONObject json = readJsonFromUrl("https://api.mojang.com/users/profiles/minecraft/" + name);
 			String uuidString = json.get("id").toString();
-			byte[] data = (byte[]) invokeStaticMethod(hexClass,
-				"decodeHex",
-				new Class[]{char[].class},
-				new Object[]{uuidString.toCharArray()});
+			byte[] data = Hex.decodeHex(uuidString.toCharArray());
 			return new UUID(ByteBuffer.wrap(data, 0, 8).getLong(), ByteBuffer.wrap(data, 8, 8).getLong());
-		} catch (IOException | ParseException e) {
+		} catch (IOException | ParseException | DecoderException e) {
 			return null;
 		}
 	}
@@ -122,48 +196,48 @@ public class Utils {
 	public static void sendPacket(Player player, Object nmsPacket) {
 		Object nmsPlayer = invokeMethod(player, "getHandle", new Class[0], new Object[0]);
 		if (nmsPlayer == null) return;
-		Object nmsPlayerConnection = getField(nmsPlayer, "playerConnection");
+		Object nmsPlayerConnection = getFieldValue(nmsPlayer, "playerConnection");
 		if (nmsPlayerConnection == null) return;
 		invokeMethod(nmsPlayerConnection, "sendPacket", new Class[]{getNmsClass("Packet")}, new Object[]{nmsPacket});
 	}
 
 	public static void displayFakeBlock(Player player, Vector location, Object block, int entityId, UUID entityUUID) {
 		//block is in nms Blocks
-		Object blockData = invokeMethod(blockClass, block, "getBlockData", new Class[0], new Object[0]);
+		Object blockData = invokeMethod(block, blockGetBlockData);
 		Object packet = newInstance(packetPlayOutSpawnEntityClass, new Class[]{}, new Object[]{});
 		if (packet == null) return;
-		setField(packet, "a", entityId);
-		setField(packet, "b", entityUUID);
+		setFieldValue(packet, packetPlayOutSpawnEntityA, entityId);
+		setFieldValue(packet, packetPlayOutSpawnEntityB, entityUUID);
 		// pos
-		setField(packet, "c", location.getX());
-		setField(packet, "d", location.getY());
-		setField(packet, "e", location.getZ());
+		setFieldValue(packet, packetPlayOutSpawnEntityC, location.getX());
+		setFieldValue(packet, packetPlayOutSpawnEntityD, location.getY());
+		setFieldValue(packet, packetPlayOutSpawnEntityE, location.getZ());
 		// entity type
-		setField(packet, "k", getStaticField(entityTypesClass, "FALLING_BLOCK"));
-		setField(packet, "l", invokeStaticMethod(blockClass, "getCombinedId", new Class[]{iBlockDataClass}, new Object[]{blockData}));
+		setFieldValue(packet, packetPlayOutSpawnEntityK, fallingBlockEntityType);
+		setFieldValue(packet, packetPlayOutSpawnEntityL, invokeStaticMethod(blockGetCombinedID, blockData));
 		sendPacket(player, packet);
 	}
 
 	public static void addGlow(Player player, int entityId) {
 		Object dataWatcher = newInstance(dataWatcherClass, new Class[]{entityClass}, new Object[]{null});
-		registerDataWatcher(dataWatcher, 0, "a", (byte) 0b01000000);
-		registerDataWatcher(dataWatcher, 5, "i", true);
+		registerDataWatcher(dataWatcher, 0, dataWatcherSerializerA, (byte) 0b01000000);
+		registerDataWatcher(dataWatcher, 5, dataWatcherSerializerI, true);
 		Object packet = newInstance(packetPlayOutEntityMetadataClass, new Class[]{int.class, dataWatcherClass, boolean.class}, new Object[]{entityId, dataWatcher, true});
 		sendPacket(player, packet);
 	}
 
 	public static void colorGlow(Player player, Object enumChatFormatColor, UUID... entityUUID) {
 		Object packetRed = newInstance(packetPlayOutScoreboardTeamClass, new Class[0], new Object[0]);
-		setField(packetRed, "a", getRandomString(16)); // name
-		setField(packetRed, "b", new ChatComponentText("")); // display name
-		setField(packetRed, "c", new ChatComponentText("PRE ")); // prefix
-		setField(packetRed, "d", new ChatComponentText(" SUF")); // suffix
-		setField(packetRed, "e", "never"); // name tag visible
-		setField(packetRed, "f", "never"); // collision rule
-		setField(packetRed, "g", enumChatFormatColor); // team color
-		setField(packetRed, "h", Arrays.stream(entityUUID).map(UUID::toString).collect(Collectors.toCollection(ArrayList::new))); // entities
-		setField(packetRed, "i", 0); // packet type crete team
-		setField(packetRed, "j", entityUUID.length); // entity count?
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamA, getRandomString(16)); // name
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamB, new ChatComponentText("")); // display name
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamC, new ChatComponentText("PRE ")); // prefix
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamD, new ChatComponentText(" SUF")); // suffix
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamE, "never"); // name tag visible
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamF, "never"); // collision rule
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamG, enumChatFormatColor); // team color
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamH, Arrays.stream(entityUUID).map(UUID::toString).collect(Collectors.toCollection(ArrayList::new))); // entities
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamI, 0); // packet type crete team
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamJ, entityUUID.length); // entity count?
 		sendPacket(player, packetRed);
 	}
 
@@ -172,14 +246,14 @@ public class Utils {
 		{
 			Object packet = newInstance(packetPlayOutSpawnEntityLivingClass, new Class[0], new Object[0]);
 			if (packet == null) return;
-			setField(packet, "a", armorstandId);
-			setField(packet, "b", UUID.randomUUID());
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingA, armorstandId);
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingB, UUID.randomUUID());
 			// entity type
-			setField(packet, "c", 1);
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingC, 1);
 			// pos
-			setField(packet, "d", to.getX());
-			setField(packet, "e", to.getY());
-			setField(packet, "f", to.getZ());
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingD, to.getX());
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingE, to.getY());
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingF, to.getZ());
 			sendPacket(player, packet);
 		}
 		{
@@ -189,10 +263,10 @@ public class Utils {
 				new Object[]{null});
 			if (dataWatcher == null) return;
 
-			registerDataWatcher(dataWatcher, 0, "a", (byte) 0b00100000);
-			registerDataWatcher(dataWatcher, 4, "i", true);
-			registerDataWatcher(dataWatcher, 5, "i", true);
-			registerDataWatcher(dataWatcher, 14, "a", (byte) 0b00010000);
+			registerDataWatcher(dataWatcher, 0, dataWatcherSerializerA, (byte) 0b00100000);
+			registerDataWatcher(dataWatcher, 4, dataWatcherSerializerI, true);
+			registerDataWatcher(dataWatcher, 5, dataWatcherSerializerI, true);
+			registerDataWatcher(dataWatcher, 14, dataWatcherSerializerA, (byte) 0b00010000);
 
 			Object packet = newInstance(packetPlayOutEntityMetadataClass, new Class[]{int.class, dataWatcherClass, boolean.class}, new Object[]{armorstandId, dataWatcher, true});
 			sendPacket(player, packet);
@@ -204,16 +278,16 @@ public class Utils {
 	public static void guardianBeamExisting(Player player, Vector from, int guardianId, int targetId) {
 		//shoots an existing target
 		{
-			Object packet = newInstance(getNmsPackage() + ".PacketPlayOutSpawnEntityLiving");
+			Object packet = newInstance(packetPlayOutSpawnEntityLivingClass, new Class[0], new Object[0]);
 			if (packet == null) return;
-			setField(packet, "a", guardianId);
-			setField(packet, "b", UUID.randomUUID());
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingA, guardianId);
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingB, UUID.randomUUID());
 			// entity type
-			setField(packet, "c", 31);
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingC, 31);
 			// pos
-			setField(packet, "d", from.getX());
-			setField(packet, "e", from.getY());
-			setField(packet, "f", from.getZ());
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingD, from.getX());
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingE, from.getY());
+			setFieldValue(packet, packetPlayOutSpawnEntityLivingF, from.getZ());
 			sendPacket(player, packet);
 		}
 		{
@@ -223,26 +297,19 @@ public class Utils {
 				new Object[]{null});
 			if (dataWatcher == null) return;
 
-			registerDataWatcher(dataWatcher, 0, "a", (byte) 0b00100000);
-			registerDataWatcher(dataWatcher, 4, "i", true);
-			registerDataWatcher(dataWatcher, 5, "i", true);
-			registerDataWatcher(dataWatcher, 16, "b", targetId);
+			registerDataWatcher(dataWatcher, 0, dataWatcherSerializerA, (byte) 0b00100000);
+			registerDataWatcher(dataWatcher, 4, dataWatcherSerializerI, true);
+			registerDataWatcher(dataWatcher, 5, dataWatcherSerializerI, true);
+			registerDataWatcher(dataWatcher, 16, dataWatcherSerializerB, targetId);
 
 			Object packet = newInstance(packetPlayOutEntityMetadataClass, new Class[]{int.class, dataWatcherClass, boolean.class}, new Object[]{guardianId, dataWatcher, true});
 			sendPacket(player, packet);
 		}
 	}
 
-	private static void registerDataWatcher(Object dataWatcher, int target, String serializer, Object value) {
-		Object dwSerializer = getStaticField(dataWatcherRegistryClass, serializer);
-		Object dwObject = newInstance(
-			dataWatcherObjectClass,
-			new Class[]{int.class, dataWatcherSerializerClass}, new Object[]{target, dwSerializer});
-		invokeMethod(
-			dataWatcher,
-			"register",
-			new Class[]{dataWatcherObjectClass, Object.class},
-			new Object[]{dwObject, value});
+	private static void registerDataWatcher(Object dataWatcher, int target, Object dwSerializer, Object value) {
+		Object dwObject = newInstance(dataWatcherObjectClass, new Class[]{int.class, dataWatcherSerializerClass}, new Object[]{target, dwSerializer});
+		invokeMethod(dataWatcher, dataWatcherRegister, dwObject, value);
 	}
 
 	public static void destroyFakeEntity(Player player, int... entityIds) {

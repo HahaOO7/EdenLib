@@ -1,6 +1,8 @@
 package at.haha007.edenlib.utils;
 
-import com.google.common.collect.ForwardingMultimap;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import org.bukkit.Material;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -9,46 +11,81 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 
 import static at.haha007.edenlib.utils.ReflectionUtils.*;
 
 public class ItemUtils {
-	private static final Class<?> gameProfileClass;
-	private static final Class<?> propertyClass;
 	private static final Class<?> craftItemStackClass;
 	private static final Class<?> itemStackClass;
 	private static final Class<?> packetPlayOutSetSlotClass;
+	private static final Class<?> nbtTagCompoundClass;
+	private static final Class<?> nbtTagListClass;
+	private static final Class<?> nbtBaseClass;
+
+	private static final Method craftItemStackAsNmsCopy;
+	private static final Method craftItemStackAsCraftMirror;
+
+	private static final Method itemStackGetOrCreateTag;
+
+	private static final Method nbtTagCompoundGetString;
+	private static final Method nbtTagCompoundSetString;
+	private static final Method nbtTagCompoundGetInt;
+	private static final Method nbtTagCompoundSetInt;
+	private static final Method nbtTagCompoundGetList;
+	private static final Method nbtTagCompoundSet;
+	private static final Method nbtTagCompoundHasKey;
+
+	private static final Method abstractListAdd;
+
+	private static final Field craftMetaSkullProfile;
+
 
 	static {
 		packetPlayOutSetSlotClass = getNmsClass("PacketPlayOutSetSlot");
 		itemStackClass = getNmsClass("ItemStack");
 		craftItemStackClass = getCraftBukkitClass("inventory.CraftItemStack");
-		gameProfileClass = getClassByName("com.mojang.authlib.GameProfile");
-		propertyClass = getClassByName("com.mojang.authlib.properties.Property");
+		nbtTagCompoundClass = getNmsClass("NBTTagCompound");
+		nbtTagListClass = getNmsClass("NBTTagList");
+		nbtBaseClass = getNmsClass("NBTBase");
+		assert nbtBaseClass != null;
 		assert craftItemStackClass != null;
+		assert nbtTagCompoundClass != null;
 		assert packetPlayOutSetSlotClass != null;
 		assert itemStackClass != null;
-		assert gameProfileClass != null;
-		assert propertyClass != null;
+		assert nbtTagListClass != null;
+
+		craftItemStackAsNmsCopy = getMethod(craftItemStackClass, "asNMSCopy", ItemStack.class);
+		craftItemStackAsCraftMirror = getMethod(craftItemStackClass, "asCraftMirror", itemStackClass);
+		itemStackGetOrCreateTag = getMethod(itemStackClass, "getOrCreateTag");
+		nbtTagCompoundGetInt = getMethod(nbtTagCompoundClass, "getInt", String.class);
+		nbtTagCompoundSetInt = getMethod(nbtTagCompoundClass, "setInt", String.class, int.class);
+		nbtTagCompoundGetString = getMethod(nbtTagCompoundClass, "getString", String.class);
+		nbtTagCompoundSetString = getMethod(nbtTagCompoundClass, "setString", String.class, String.class);
+		nbtTagCompoundGetList = getMethod(nbtTagCompoundClass, "getList", String.class, int.class);
+		nbtTagCompoundSet = getMethod(nbtTagCompoundClass, "set", String.class, nbtBaseClass);
+		nbtTagCompoundHasKey = getMethod(nbtTagCompoundClass, "hasKey", String.class);
+
+		abstractListAdd = getMethod(AbstractList.class, "add", Object.class);
+
+		Class<?> craftMetaSkullClass = getCraftBukkitClass("inventory.CraftMetaSkull");
+		assert craftMetaSkullClass != null;
+		craftMetaSkullProfile = getField(craftMetaSkullClass, "profile");
 	}
 
 	public static ItemStack getSkull(String texture) {
 		ItemStack item = new ItemStack(Material.PLAYER_HEAD);
-
 		SkullMeta itemMeta = (SkullMeta) item.getItemMeta();
-		Object profile = newInstance(gameProfileClass, new Class[]{UUID.class, String.class}, new Object[]{UUID.randomUUID(), null});
-		if (profile == null) return null;
-		Object properties = invokeMethod(profile, "getProperties");
-		if (properties == null) return null;
-
-		Object property = newInstance(propertyClass, new Class[]{String.class, String.class}, new Object[]{"textures", texture});
-		invokeMethod(ForwardingMultimap.class, properties, "put", new Class[]{Object.class, Object.class}, new Object[]{"textures", property});
+		GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+		PropertyMap properties = profile.getProperties();
+		Property property = new Property("textures", texture);
+		properties.put("textures", property);
+		System.out.println(itemMeta.getClass().getName());
 		try {
-			Field profileField = itemMeta.getClass().getDeclaredField("profile");
-			profileField.setAccessible(true);
-			profileField.set(itemMeta, profile);
-		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
+			craftMetaSkullProfile.setAccessible(true);
+			craftMetaSkullProfile.set(itemMeta, profile);
+		} catch (IllegalArgumentException | IllegalAccessException e) {
 			e.printStackTrace();
 		}
 		item.setItemMeta(itemMeta);
@@ -69,11 +106,11 @@ public class ItemUtils {
 	}
 
 	public static Object getNmsStack(ItemStack itemStack) {
-		return invokeStaticMethod(craftItemStackClass, "asNMSCopy", new Class[]{ItemStack.class}, new Object[]{itemStack});
+		return invokeStaticMethod(craftItemStackAsNmsCopy, itemStack);
 	}
 
-	public static Object getBukkitStack(Object nmsItemStack) {
-		return invokeStaticMethod(craftItemStackClass, "asCraftMirror", new Class[]{itemStackClass}, new Object[]{nmsItemStack});
+	public static ItemStack getBukkitStack(Object nmsItemStack) {
+		return (ItemStack) invokeStaticMethod(craftItemStackAsCraftMirror, nmsItemStack);
 	}
 
 	public static void giveItem(Player player, ItemStack item) {
@@ -87,18 +124,18 @@ public class ItemUtils {
 	public static ItemStack setNbtString(ItemStack item, String name, String value) {
 		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return item;
-		Object nbtTagCompound = invokeMethod(nmsItem, "getOrCreateTag");
+		Object nbtTagCompound = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (nbtTagCompound == null) return item;
-		invokeMethod(nbtTagCompound, "setString", name, value);
-		return (ItemStack) invokeStaticMethod(craftItemStackClass, "asCraftMirror", new Class[]{itemStackClass}, new Object[]{nmsItem});
+		invokeMethod(nbtTagCompound, nbtTagCompoundSetString, name, value);
+		return getBukkitStack(nmsItem);
 	}
 
 	public static String getNbtString(ItemStack item, String key) {
 		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return null;
-		Object tag = invokeMethod(nmsItem, "getOrCreateTag");
+		Object tag = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (tag == null) return null;
-		Object string = invokeMethod(tag, "getString", key);
+		Object string = invokeMethod(tag, nbtTagCompoundGetString, key);
 		if (string == null) return null;
 		return string.toString();
 	}
@@ -106,35 +143,44 @@ public class ItemUtils {
 	public static ItemStack setNbtInt(ItemStack item, String name, int value) {
 		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return item;
-		Object nbtTagCompound = invokeMethod(nmsItem, "getOrCreateTag");
+		Object nbtTagCompound = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (nbtTagCompound == null) return item;
-		invokeMethod(nbtTagCompound, "setInt", new Class[]{String.class, int.class}, new Object[]{name, value});
-		return (ItemStack) invokeStaticMethod(craftItemStackClass, "asCraftMirror", new Class[]{itemStackClass}, new Object[]{nmsItem});
+		invokeMethod(nbtTagCompound, nbtTagCompoundSetInt, name, value);
+		return getBukkitStack(nmsItem);
 	}
 
 	public static int getNbtInt(ItemStack item, String key) {
 		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return 0;
-		Object tag = invokeMethod(nmsItem, "getOrCreateTag");
+		Object tag = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (tag == null) return 0;
-		Object integer = invokeMethod(tag, "getInt", key);
+		Object integer = invokeMethod(tag, nbtTagCompoundGetInt, key);
 		if (integer == null) return 0;
 		return (int) integer;
 	}
 
-	public static ItemStack addGlow(ItemStack item) {
+	public static ItemStack setGlow(ItemStack item, boolean glow) {
 		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return item;
-		Object tag = invokeMethod(nmsItem, "getOrCreateTag");
+		Object tag = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (tag == null) return item;
-		Object flag = invokeMethod(tag, "getInt", "HideFlags");
+		Object flag = invokeMethod(tag, nbtTagCompoundGetInt, "HideFlags");
 		if (flag == null) return item;
-		invokeMethod(tag, "setInt", "HideFlags", (int) flag % 2 == 0 ? (int) flag + 1 : (int) flag - 1);
-		Object enchantments = invokeMethod(tag, "getList", "Enchantments");
-		if (enchantments == null)
-			enchantments = newInstance(getNmsPackage() + ".NBTTagList");
-		invokeMethod(tag, "set", "Enchantments", enchantments);
-		return (ItemStack) invokeStaticMethod(getCraftBukkitPackage() + ".inventory.CraftItemStack", "asCraftMirror", nmsItem);
+		int f = (int) flag;
+		if (f % 2 != 0) f -= 1;
+		invokeMethod(tag, nbtTagCompoundSetInt, "HideFlags", glow ? f + 1 : f);
+		Object enchantments;
+		Object b = invokeMethod(tag, nbtTagCompoundHasKey, "Enchantments");
+		if (b == null) return item;
+		if ((boolean) b)
+			enchantments = invokeMethod(tag, nbtTagCompoundGetList, "Enchantments", 10); // 10 -> TAG_Compound
+		else
+			enchantments = newInstance(nbtTagListClass, new Class[]{List.class, byte.class}, new Object[]{new ArrayList<>(), (byte) 10});
+		if (enchantments == null) return item;
+		Object enchantment = newInstance(nbtTagCompoundClass, new Class[0], new Object[0]);
+		invokeMethod(enchantments, abstractListAdd, enchantment);
+		invokeMethod(tag, nbtTagCompoundSet, "Enchantments", enchantments);
+		return getBukkitStack(nmsItem);
 	}
 
 	public static void sendFakeItemChange(int slot, Object nmsItemStack, Player player) {
