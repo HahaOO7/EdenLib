@@ -2,6 +2,7 @@ package at.haha007.edenlib.utils;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import org.bukkit.Material;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -10,21 +11,81 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 
+import static at.haha007.edenlib.utils.ReflectionUtils.*;
+
 public class ItemUtils {
+	private static final Class<?> craftItemStackClass;
+	private static final Class<?> itemStackClass;
+	private static final Class<?> packetPlayOutSetSlotClass;
+	private static final Class<?> nbtTagCompoundClass;
+	private static final Class<?> nbtTagListClass;
+	private static final Class<?> nbtBaseClass;
+
+	private static final Method craftItemStackAsNmsCopy;
+	private static final Method craftItemStackAsCraftMirror;
+
+	private static final Method itemStackGetOrCreateTag;
+
+	private static final Method nbtTagCompoundGetString;
+	private static final Method nbtTagCompoundSetString;
+	private static final Method nbtTagCompoundGetInt;
+	private static final Method nbtTagCompoundSetInt;
+	private static final Method nbtTagCompoundGetList;
+	private static final Method nbtTagCompoundSet;
+	private static final Method nbtTagCompoundHasKey;
+
+	private static final Method abstractListAdd;
+
+	private static final Field craftMetaSkullProfile;
+
+
+	static {
+		packetPlayOutSetSlotClass = getNmsClass("PacketPlayOutSetSlot");
+		itemStackClass = getNmsClass("ItemStack");
+		craftItemStackClass = getCraftBukkitClass("inventory.CraftItemStack");
+		nbtTagCompoundClass = getNmsClass("NBTTagCompound");
+		nbtTagListClass = getNmsClass("NBTTagList");
+		nbtBaseClass = getNmsClass("NBTBase");
+		assert nbtBaseClass != null;
+		assert craftItemStackClass != null;
+		assert nbtTagCompoundClass != null;
+		assert packetPlayOutSetSlotClass != null;
+		assert itemStackClass != null;
+		assert nbtTagListClass != null;
+
+		craftItemStackAsNmsCopy = getMethod(craftItemStackClass, "asNMSCopy", ItemStack.class);
+		craftItemStackAsCraftMirror = getMethod(craftItemStackClass, "asCraftMirror", itemStackClass);
+		itemStackGetOrCreateTag = getMethod(itemStackClass, "getOrCreateTag");
+		nbtTagCompoundGetInt = getMethod(nbtTagCompoundClass, "getInt", String.class);
+		nbtTagCompoundSetInt = getMethod(nbtTagCompoundClass, "setInt", String.class, int.class);
+		nbtTagCompoundGetString = getMethod(nbtTagCompoundClass, "getString", String.class);
+		nbtTagCompoundSetString = getMethod(nbtTagCompoundClass, "setString", String.class, String.class);
+		nbtTagCompoundGetList = getMethod(nbtTagCompoundClass, "getList", String.class, int.class);
+		nbtTagCompoundSet = getMethod(nbtTagCompoundClass, "set", String.class, nbtBaseClass);
+		nbtTagCompoundHasKey = getMethod(nbtTagCompoundClass, "hasKey", String.class);
+
+		abstractListAdd = getMethod(AbstractList.class, "add", Object.class);
+
+		Class<?> craftMetaSkullClass = getCraftBukkitClass("inventory.CraftMetaSkull");
+		assert craftMetaSkullClass != null;
+		craftMetaSkullProfile = getField(craftMetaSkullClass, "profile");
+	}
 
 	public static ItemStack getSkull(String texture) {
 		ItemStack item = new ItemStack(Material.PLAYER_HEAD);
-
 		SkullMeta itemMeta = (SkullMeta) item.getItemMeta();
 		GameProfile profile = new GameProfile(UUID.randomUUID(), null);
-		profile.getProperties().put("textures", new Property("textures", texture));
+		PropertyMap properties = profile.getProperties();
+		Property property = new Property("textures", texture);
+		properties.put("textures", property);
+		System.out.println(itemMeta.getClass().getName());
 		try {
-			Field profileField = itemMeta.getClass().getDeclaredField("profile");
-			profileField.setAccessible(true);
-			profileField.set(itemMeta, profile);
-		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
+			craftMetaSkullProfile.setAccessible(true);
+			craftMetaSkullProfile.set(itemMeta, profile);
+		} catch (IllegalArgumentException | IllegalAccessException e) {
 			e.printStackTrace();
 		}
 		item.setItemMeta(itemMeta);
@@ -45,7 +106,11 @@ public class ItemUtils {
 	}
 
 	public static Object getNmsStack(ItemStack itemStack) {
-		return ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asNMSCopy", itemStack);
+		return invokeStaticMethod(craftItemStackAsNmsCopy, itemStack);
+	}
+
+	public static ItemStack getBukkitStack(Object nmsItemStack) {
+		return (ItemStack) invokeStaticMethod(craftItemStackAsCraftMirror, nmsItemStack);
 	}
 
 	public static void giveItem(Player player, ItemStack item) {
@@ -57,60 +122,69 @@ public class ItemUtils {
 	}
 
 	public static ItemStack setNbtString(ItemStack item, String name, String value) {
-		Object nmsItem = ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asNMSCopy", item);
+		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return item;
-		Object nbtTagCompound = ReflectionUtils.invokeMethod(nmsItem, "getOrCreateTag");
+		Object nbtTagCompound = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (nbtTagCompound == null) return item;
-		ReflectionUtils.invokeMethod(nbtTagCompound, "setString", name, value);
-		return (ItemStack) ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asCraftMirror", nmsItem);
+		invokeMethod(nbtTagCompound, nbtTagCompoundSetString, name, value);
+		return getBukkitStack(nmsItem);
 	}
 
 	public static String getNbtString(ItemStack item, String key) {
-		Object nmsItem = ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asNMSCopy", item);
+		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return null;
-		Object tag = ReflectionUtils.invokeMethod(nmsItem, "getOrCreateTag");
+		Object tag = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (tag == null) return null;
-		Object string = ReflectionUtils.invokeMethod(tag, "getString", key);
+		Object string = invokeMethod(tag, nbtTagCompoundGetString, key);
 		if (string == null) return null;
 		return string.toString();
 	}
 
 	public static ItemStack setNbtInt(ItemStack item, String name, int value) {
-		Object nmsItem = ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asNMSCopy", item);
+		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return item;
-		Object nbtTagCompound = ReflectionUtils.invokeMethod(nmsItem, "getOrCreateTag");
+		Object nbtTagCompound = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (nbtTagCompound == null) return item;
-		ReflectionUtils.invokeMethod(nbtTagCompound, "setInt", name, value);
-		return (ItemStack) ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asCraftMirror", nmsItem);
+		invokeMethod(nbtTagCompound, nbtTagCompoundSetInt, name, value);
+		return getBukkitStack(nmsItem);
 	}
 
 	public static int getNbtInt(ItemStack item, String key) {
-		Object nmsItem = ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asNMSCopy", item);
+		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return 0;
-		Object tag = ReflectionUtils.invokeMethod(nmsItem, "getOrCreateTag");
+		Object tag = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (tag == null) return 0;
-		Object integer = ReflectionUtils.invokeMethod(tag, "getInt", key);
+		Object integer = invokeMethod(tag, nbtTagCompoundGetInt, key);
 		if (integer == null) return 0;
 		return (int) integer;
 	}
 
-	public static ItemStack addGlow(ItemStack item) {
-		Object nmsItem = ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asNMSCopy", item);
+	public static ItemStack setGlow(ItemStack item, boolean glow) {
+		Object nmsItem = getNmsStack(item);
 		if (nmsItem == null) return item;
-		Object tag = ReflectionUtils.invokeMethod(nmsItem, "getOrCreateTag");
+		Object tag = invokeMethod(nmsItem, itemStackGetOrCreateTag);
 		if (tag == null) return item;
-		Object flag = ReflectionUtils.invokeMethod(tag, "getInt", "HideFlags");
+		Object flag = invokeMethod(tag, nbtTagCompoundGetInt, "HideFlags");
 		if (flag == null) return item;
-		ReflectionUtils.invokeMethod(tag, "setInt", "HideFlags", (int) flag % 2 == 0 ? (int) flag + 1 : (int) flag - 1);
-		Object enchantments = ReflectionUtils.invokeMethod(tag, "getList", "Enchantments");
-		if (enchantments == null)
-			enchantments = ReflectionUtils.newInstance(ReflectionUtils.getNmsPackage() + ".NBTTagList");
-		ReflectionUtils.invokeMethod(tag, "set", "Enchantments", enchantments);
-		return (ItemStack) ReflectionUtils.invokeStaticMethod(ReflectionUtils.getNmsPackage() + ".CraftItemStack", "asCraftMirror", nmsItem);
+		int f = (int) flag;
+		if (f % 2 != 0) f -= 1;
+		invokeMethod(tag, nbtTagCompoundSetInt, "HideFlags", glow ? f + 1 : f);
+		Object enchantments;
+		Object b = invokeMethod(tag, nbtTagCompoundHasKey, "Enchantments");
+		if (b == null) return item;
+		if ((boolean) b)
+			enchantments = invokeMethod(tag, nbtTagCompoundGetList, "Enchantments", 10); // 10 -> TAG_Compound
+		else
+			enchantments = newInstance(nbtTagListClass, new Class[]{List.class, byte.class}, new Object[]{new ArrayList<>(), (byte) 10});
+		if (enchantments == null) return item;
+		Object enchantment = newInstance(nbtTagCompoundClass, new Class[0], new Object[0]);
+		invokeMethod(enchantments, abstractListAdd, enchantment);
+		invokeMethod(tag, nbtTagCompoundSet, "Enchantments", enchantments);
+		return getBukkitStack(nmsItem);
 	}
 
 	public static void sendFakeItemChange(int slot, Object nmsItemStack, Player player) {
-		Utils.sendPacket(player, ReflectionUtils.newInstance(ReflectionUtils.getNmsPackage() + ".PacketPlayOutSetSlot", 0, dataSlotToNetworkSlot(0), nmsItemStack));
+		Utils.sendPacket(player, newInstance(packetPlayOutSetSlotClass, new Class[]{int.class, int.class, itemStackClass}, new Object[]{0, dataSlotToNetworkSlot(slot), nmsItemStack}));
 	}
 
 	public static int dataSlotToNetworkSlot(int index) {

@@ -20,7 +20,7 @@ public class SqliteDatabase extends SqlDatabase {
 				e.printStackTrace();
 			}
 		}
-		this.path = path;
+		this.path = plugin.getName() + "/" + path;
 	}
 
 	public void connect() throws SQLException {
