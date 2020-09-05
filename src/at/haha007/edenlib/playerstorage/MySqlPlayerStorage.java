@@ -125,7 +125,7 @@ public class MySqlPlayerStorage implements PerPlayerStorage {
 	private String decompress(InputStream data) {
 		StringBuilder sb = new StringBuilder();
 		try {
-			new BufferedReader(new InputStreamReader(new GZIPInputStream(data))).lines().forEachOrdered(sb::append);
+			new BufferedReader(new InputStreamReader(new GZIPInputStream(data))).lines().forEachOrdered(line -> sb.append(line).append(System.lineSeparator()));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

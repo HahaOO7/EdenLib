@@ -38,7 +38,7 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 			statement.setString(1, player.toString());
 			ResultSet result = statement.executeQuery();
 			if (result.next())
-				return YamlConfiguration.loadConfiguration(new StringReader(decompress(result.getBlob(1).getBinaryStream())));
+				return YamlConfiguration.loadConfiguration(new StringReader(decompress(new ByteArrayInputStream(result.getBytes(1)))));
 		} catch (SQLException ignore) {
 		}
 		return new YamlConfiguration();
@@ -51,7 +51,7 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 			statement.setString(1, player.toString());
 			ResultSet result = statement.executeQuery();
 			if (result.next()) {
-				ConfigurationSection cfg = YamlConfiguration.loadConfiguration(new StringReader(decompress(result.getBlob(1).getBinaryStream()))).getConfigurationSection(key);
+				ConfigurationSection cfg = YamlConfiguration.loadConfiguration(new StringReader(decompress(new ByteArrayInputStream(result.getBytes(1))))).getConfigurationSection(key);
 				if (cfg == null) return new YamlConfiguration();
 				return cfg;
 			}
@@ -66,9 +66,10 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 		try {
 			PreparedStatement statement = database.prepareStatement("REPLACE INTO `PerPlayerStorage` VALUES(?, ?)");
 			statement.setString(1, player.toString());
-			statement.setBlob(2, new ByteArrayInputStream(compress(cfg.saveToString())));
+			statement.setBytes(2, compress(cfg.saveToString()));
 			statement.executeUpdate();
-		} catch (SQLException ignore) {
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -79,9 +80,10 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 		try {
 			PreparedStatement statement = database.prepareStatement("REPLACE INTO `PerPlayerStorage` VALUES(?, ?)");
 			statement.setString(1, player.toString());
-			statement.setBlob(2, new ByteArrayInputStream(compress(configuration.saveToString())));
+			statement.setBytes(2, compress(configuration.saveToString()));
 			statement.executeUpdate();
-		} catch (SQLException ignore) {
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -109,7 +111,7 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 		}
 	}
 
-	private byte[] compress(String string) {
+	protected static  byte[] compress(String string) {
 		try {
 			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 			GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream);
@@ -123,10 +125,10 @@ public class SqlitePlayerStorage implements PerPlayerStorage {
 		return null;
 	}
 
-	private String decompress(InputStream data) {
+	protected static String decompress(InputStream data) {
 		StringBuilder sb = new StringBuilder();
 		try {
-			new BufferedReader(new InputStreamReader(new GZIPInputStream(data))).lines().forEachOrdered(sb::append);
+			new BufferedReader(new InputStreamReader(new GZIPInputStream(data))).lines().forEachOrdered(line -> sb.append(line).append(System.lineSeparator()));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
