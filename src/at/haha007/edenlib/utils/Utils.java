@@ -145,12 +145,7 @@ public class Utils {
 	}
 
 	public static String combineStrings(int startIndex, int endIndex, String... strings) {
-		StringBuilder string = new StringBuilder();
-		for (int i = startIndex; i <= endIndex; i++) {
-			string.append(" ").append(strings[i]);
-		}
-
-		return string.toString().replaceFirst(" ", "");
+		return String.join(" ", Arrays.copyOfRange(strings, startIndex, endIndex));
 	}
 
 	public static String getRandomString(int length) {
@@ -170,16 +165,18 @@ public class Utils {
 			String uuidString = json.get("id").toString();
 			byte[] data = Hex.decodeHex(uuidString.toCharArray());
 			return new UUID(ByteBuffer.wrap(data, 0, 8).getLong(), ByteBuffer.wrap(data, 8, 8).getLong());
-		} catch (IOException | ParseException | DecoderException e) {
+		} catch (DecoderException e) {
 			return null;
 		}
 	}
 
-	public static JSONObject readJsonFromUrl(String url) throws IOException, ParseException {
+	public static JSONObject readJsonFromUrl(String url) {
 		try (InputStream is = new URL(url).openStream()) {
 			BufferedReader rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
 			String jsonText = readAll(rd);
 			return (JSONObject) new JSONParser().parse(jsonText);
+		} catch (ParseException | IOException e) {
+			return new JSONObject();
 		}
 	}
 
@@ -202,7 +199,7 @@ public class Utils {
 	}
 
 	public static void displayFakeBlock(Player player, Vector location, Object block, int entityId, UUID entityUUID) {
-		//block is in nms Blocks
+		//block is in net.minecraft.server.xxx.Blocks
 		Object blockData = invokeMethod(block, blockGetBlockData);
 		Object packet = newInstance(packetPlayOutSpawnEntityClass, new Class[]{}, new Object[]{});
 		if (packet == null) return;
