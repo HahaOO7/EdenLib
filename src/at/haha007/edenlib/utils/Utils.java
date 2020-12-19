@@ -1,6 +1,5 @@
 package at.haha007.edenlib.utils;
 
-import net.minecraft.server.v1_16_R2.ChatComponentText;
 import org.bukkit.craftbukkit.libs.org.apache.commons.codec.DecoderException;
 import org.bukkit.craftbukkit.libs.org.apache.commons.codec.binary.Hex;
 import org.bukkit.entity.Player;
@@ -38,6 +37,7 @@ public class Utils {
 	private static final Class<?> entityTypesClass;
 	private static final Class<?> blockClass;
 	private static final Class<?> iBlockDataClass;
+	private static final Class<?> chatComponentTextClass;
 
 	private static final Field packetPlayOutSpawnEntityA;
 	private static final Field packetPlayOutSpawnEntityB;
@@ -91,6 +91,7 @@ public class Utils {
 		entityTypesClass = getNmsClass("EntityTypes");
 		blockClass = getNmsClass("Block");
 		iBlockDataClass = getNmsClass("IBlockData");
+		chatComponentTextClass = getNmsClass("ChatComponentText");
 		assert blockClass != null;
 		assert iBlockDataClass != null;
 		assert entityTypesClass != null;
@@ -104,6 +105,7 @@ public class Utils {
 		assert dataWatcherRegistryClass != null;
 		assert packetPlayOutSpawnEntityClass != null;
 		assert packetPlayOutScoreboardTeamClass != null;
+		assert chatComponentTextClass != null;
 
 		packetPlayOutSpawnEntityA = getField(packetPlayOutSpawnEntityClass, "a");
 		packetPlayOutSpawnEntityB = getField(packetPlayOutSpawnEntityClass, "b");
@@ -145,12 +147,7 @@ public class Utils {
 	}
 
 	public static String combineStrings(int startIndex, int endIndex, String... strings) {
-		StringBuilder string = new StringBuilder();
-		for (int i = startIndex; i <= endIndex; i++) {
-			string.append(" ").append(strings[i]);
-		}
-
-		return string.toString().replaceFirst(" ", "");
+		return String.join(" ", Arrays.copyOfRange(strings, startIndex, endIndex));
 	}
 
 	public static String getRandomString(int length) {
@@ -166,20 +163,22 @@ public class Utils {
 
 	public static UUID getUUID(String name) {
 		try {
-			JSONObject json = readJsonFromUrl("https://api.mojang.com/users/profiles/minecraft/" + name);
+			JSONObject json = (JSONObject) readJsonFromUrl("https://api.mojang.com/users/profiles/minecraft/" + name);
 			String uuidString = json.get("id").toString();
 			byte[] data = Hex.decodeHex(uuidString.toCharArray());
 			return new UUID(ByteBuffer.wrap(data, 0, 8).getLong(), ByteBuffer.wrap(data, 8, 8).getLong());
-		} catch (IOException | ParseException | DecoderException e) {
+		} catch (DecoderException e) {
 			return null;
 		}
 	}
 
-	public static JSONObject readJsonFromUrl(String url) throws IOException, ParseException {
+	public static Object readJsonFromUrl(String url) {
 		try (InputStream is = new URL(url).openStream()) {
 			BufferedReader rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
 			String jsonText = readAll(rd);
-			return (JSONObject) new JSONParser().parse(jsonText);
+			return new JSONParser().parse(jsonText);
+		} catch (ParseException | IOException e) {
+			return new JSONObject();
 		}
 	}
 
@@ -202,7 +201,7 @@ public class Utils {
 	}
 
 	public static void displayFakeBlock(Player player, Vector location, Object block, int entityId, UUID entityUUID) {
-		//block is in nms Blocks
+		//block is in net.minecraft.server.xxx.Blocks
 		Object blockData = invokeMethod(block, blockGetBlockData);
 		Object packet = newInstance(packetPlayOutSpawnEntityClass, new Class[]{}, new Object[]{});
 		if (packet == null) return;
@@ -229,9 +228,9 @@ public class Utils {
 	public static void colorGlow(Player player, Object enumChatFormatColor, UUID... entityUUID) {
 		Object packetRed = newInstance(packetPlayOutScoreboardTeamClass, new Class[0], new Object[0]);
 		setFieldValue(packetRed, packetPlayOutScoreboardTeamA, getRandomString(16)); // name
-		setFieldValue(packetRed, packetPlayOutScoreboardTeamB, new ChatComponentText("")); // display name
-		setFieldValue(packetRed, packetPlayOutScoreboardTeamC, new ChatComponentText("PRE ")); // prefix
-		setFieldValue(packetRed, packetPlayOutScoreboardTeamD, new ChatComponentText(" SUF")); // suffix
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamB, newInstance(chatComponentTextClass, new Class[]{String.class}, new Object[]{""})); // display name
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamC, newInstance(chatComponentTextClass, new Class[]{String.class}, new Object[]{"PRE "})); // prefix
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamD, newInstance(chatComponentTextClass, new Class[]{String.class}, new Object[]{" SUF"})); // suffix
 		setFieldValue(packetRed, packetPlayOutScoreboardTeamE, "never"); // name tag visible
 		setFieldValue(packetRed, packetPlayOutScoreboardTeamF, "never"); // collision rule
 		setFieldValue(packetRed, packetPlayOutScoreboardTeamG, enumChatFormatColor); // team color

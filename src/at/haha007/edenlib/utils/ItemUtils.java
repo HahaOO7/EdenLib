@@ -81,7 +81,6 @@ public class ItemUtils {
 		PropertyMap properties = profile.getProperties();
 		Property property = new Property("textures", texture);
 		properties.put("textures", property);
-		System.out.println(itemMeta.getClass().getName());
 		try {
 			craftMetaSkullProfile.setAccessible(true);
 			craftMetaSkullProfile.set(itemMeta, profile);

@@ -1,7 +1,6 @@
 package at.haha007.edenlib.database;
 
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class MySqlDatabase extends SqlDatabase {
@@ -19,15 +18,10 @@ public class MySqlDatabase extends SqlDatabase {
 	}
 
 	@Override
-	public PreparedStatement prepareStatement(String statement) throws SQLException {
-		return connection.prepareStatement(statement);
-	}
-
-	@Override
 	public void connect() throws SQLException {
 		try {
-			Class.forName("com.mysql.jdbc.Driver").newInstance();
-		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+			Class.forName("com.mysql.jdbc.Driver");
+		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
 		connection = DriverManager.getConnection(String.format("jdbc:mysql://%s/%s?user=%s&password=%s&useSSL=%b&autoReconnect=yes", host, database, username, password, useSSL));
