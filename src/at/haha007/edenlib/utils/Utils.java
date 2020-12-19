@@ -1,6 +1,5 @@
 package at.haha007.edenlib.utils;
 
-import net.minecraft.server.v1_16_R2.ChatComponentText;
 import org.bukkit.craftbukkit.libs.org.apache.commons.codec.DecoderException;
 import org.bukkit.craftbukkit.libs.org.apache.commons.codec.binary.Hex;
 import org.bukkit.entity.Player;
@@ -38,6 +37,7 @@ public class Utils {
 	private static final Class<?> entityTypesClass;
 	private static final Class<?> blockClass;
 	private static final Class<?> iBlockDataClass;
+	private static final Class<?> chatComponentTextClass;
 
 	private static final Field packetPlayOutSpawnEntityA;
 	private static final Field packetPlayOutSpawnEntityB;
@@ -91,6 +91,7 @@ public class Utils {
 		entityTypesClass = getNmsClass("EntityTypes");
 		blockClass = getNmsClass("Block");
 		iBlockDataClass = getNmsClass("IBlockData");
+		chatComponentTextClass = getNmsClass("ChatComponentText");
 		assert blockClass != null;
 		assert iBlockDataClass != null;
 		assert entityTypesClass != null;
@@ -104,6 +105,7 @@ public class Utils {
 		assert dataWatcherRegistryClass != null;
 		assert packetPlayOutSpawnEntityClass != null;
 		assert packetPlayOutScoreboardTeamClass != null;
+		assert chatComponentTextClass != null;
 
 		packetPlayOutSpawnEntityA = getField(packetPlayOutSpawnEntityClass, "a");
 		packetPlayOutSpawnEntityB = getField(packetPlayOutSpawnEntityClass, "b");
@@ -226,9 +228,9 @@ public class Utils {
 	public static void colorGlow(Player player, Object enumChatFormatColor, UUID... entityUUID) {
 		Object packetRed = newInstance(packetPlayOutScoreboardTeamClass, new Class[0], new Object[0]);
 		setFieldValue(packetRed, packetPlayOutScoreboardTeamA, getRandomString(16)); // name
-		setFieldValue(packetRed, packetPlayOutScoreboardTeamB, new ChatComponentText("")); // display name
-		setFieldValue(packetRed, packetPlayOutScoreboardTeamC, new ChatComponentText("PRE ")); // prefix
-		setFieldValue(packetRed, packetPlayOutScoreboardTeamD, new ChatComponentText(" SUF")); // suffix
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamB, newInstance(chatComponentTextClass, new Class[]{String.class}, new Object[]{""})); // display name
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamC, newInstance(chatComponentTextClass, new Class[]{String.class}, new Object[]{"PRE "})); // prefix
+		setFieldValue(packetRed, packetPlayOutScoreboardTeamD, newInstance(chatComponentTextClass, new Class[]{String.class}, new Object[]{" SUF"})); // suffix
 		setFieldValue(packetRed, packetPlayOutScoreboardTeamE, "never"); // name tag visible
 		setFieldValue(packetRed, packetPlayOutScoreboardTeamF, "never"); // collision rule
 		setFieldValue(packetRed, packetPlayOutScoreboardTeamG, enumChatFormatColor); // team color
