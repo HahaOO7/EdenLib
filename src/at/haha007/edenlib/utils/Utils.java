@@ -163,7 +163,7 @@ public class Utils {
 
 	public static UUID getUUID(String name) {
 		try {
-			JSONObject json = readJsonFromUrl("https://api.mojang.com/users/profiles/minecraft/" + name);
+			JSONObject json = (JSONObject) readJsonFromUrl("https://api.mojang.com/users/profiles/minecraft/" + name);
 			String uuidString = json.get("id").toString();
 			byte[] data = Hex.decodeHex(uuidString.toCharArray());
 			return new UUID(ByteBuffer.wrap(data, 0, 8).getLong(), ByteBuffer.wrap(data, 8, 8).getLong());
@@ -172,11 +172,11 @@ public class Utils {
 		}
 	}
 
-	public static JSONObject readJsonFromUrl(String url) {
+	public static Object readJsonFromUrl(String url) {
 		try (InputStream is = new URL(url).openStream()) {
 			BufferedReader rd = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
 			String jsonText = readAll(rd);
-			return (JSONObject) new JSONParser().parse(jsonText);
+			return new JSONParser().parse(jsonText);
 		} catch (ParseException | IOException e) {
 			return new JSONObject();
 		}
