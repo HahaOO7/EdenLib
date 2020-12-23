@@ -44,7 +44,7 @@ public class ReflectionUtils {
 		try {
 			Class<?> clazz = object.getClass();
 			Field field = clazz.getDeclaredField(fieldName);
-			boolean a = field.isAccessible();
+			boolean a = field.canAccess(object);
 			field.setAccessible(true);
 			field.set(object, value);
 			field.setAccessible(a);
@@ -55,7 +55,7 @@ public class ReflectionUtils {
 
 	public static void setFieldValue(Object object, Field field, Object value) {
 		try {
-			boolean a = field.isAccessible();
+			boolean a = field.canAccess(object);
 			field.setAccessible(true);
 			field.set(object, value);
 			field.setAccessible(a);
@@ -95,8 +95,8 @@ public class ReflectionUtils {
 			return constructor.newInstance(params);
 		} catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
 			e.printStackTrace();
+			return null;
 		}
-		return null;
 	}
 
 	public static Object newInstance(String clazzName, String[] argTypes, Object[] constructorArgs) {
