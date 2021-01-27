@@ -38,6 +38,7 @@ public class Utils {
 	private static final Class<?> blockClass;
 	private static final Class<?> iBlockDataClass;
 	private static final Class<?> chatComponentTextClass;
+	private static final Class<?> playerClass;
 
 	private static final Field packetPlayOutSpawnEntityA;
 	private static final Field packetPlayOutSpawnEntityB;
@@ -73,6 +74,7 @@ public class Utils {
 	private static final Method blockGetBlockData;
 
 	private static final Method dataWatcherRegister;
+	private static final Method playerGetHandle;
 
 
 	private static final Object fallingBlockEntityType;
@@ -92,6 +94,7 @@ public class Utils {
 		blockClass = getNmsClass("Block");
 		iBlockDataClass = getNmsClass("IBlockData");
 		chatComponentTextClass = getNmsClass("ChatComponentText");
+		playerClass = getCraftBukkitClass("entity.CraftPlayer");
 		assert blockClass != null;
 		assert iBlockDataClass != null;
 		assert entityTypesClass != null;
@@ -106,6 +109,7 @@ public class Utils {
 		assert packetPlayOutSpawnEntityClass != null;
 		assert packetPlayOutScoreboardTeamClass != null;
 		assert chatComponentTextClass != null;
+		assert playerClass != null;
 
 		packetPlayOutSpawnEntityA = getField(packetPlayOutSpawnEntityClass, "a");
 		packetPlayOutSpawnEntityB = getField(packetPlayOutSpawnEntityClass, "b");
@@ -135,6 +139,8 @@ public class Utils {
 
 		blockGetCombinedID = getMethod(blockClass, "getCombinedId", iBlockDataClass);
 		blockGetBlockData = getMethod(blockClass, "getBlockData");
+		playerGetHandle = getMethod(playerClass, "getHandle");
+
 
 		dataWatcherRegister = getMethod(dataWatcherClass, "register", dataWatcherObjectClass, Object.class);
 
@@ -192,8 +198,12 @@ public class Utils {
 		return sb.toString();
 	}
 
+	public static Object getNmsPlayer(Player player) {
+		return invokeMethod(player, playerGetHandle, new Class[0], new Object[0]);
+	}
+
 	public static void sendPacket(Player player, Object nmsPacket) {
-		Object nmsPlayer = invokeMethod(player, "getHandle", new Class[0], new Object[0]);
+		Object nmsPlayer = invokeMethod(player, playerGetHandle, new Class[0], new Object[0]);
 		if (nmsPlayer == null) return;
 		Object nmsPlayerConnection = getFieldValue(nmsPlayer, "playerConnection");
 		if (nmsPlayerConnection == null) return;
