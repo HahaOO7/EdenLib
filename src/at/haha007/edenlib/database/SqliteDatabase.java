@@ -9,27 +9,27 @@ import java.sql.SQLException;
 
 public class SqliteDatabase extends SqlDatabase {
 
-	private final String path;
+    private final String path;
 
-	public SqliteDatabase(JavaPlugin plugin, String path) {
-		File file = new File(plugin.getDataFolder(), path);
-		if (!file.exists()) {
-			try {
-				file.createNewFile();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		this.path = plugin.getName() + "/" + path;
-	}
+    public SqliteDatabase(JavaPlugin plugin, String path) {
+        File file = new File(plugin.getDataFolder(), path);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        this.path = plugin.getName() + "/" + path;
+    }
 
-	public void connect() throws SQLException {
-		try {
-			Class.forName("org.sqlite.JDBC");
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-		connection = DriverManager.getConnection(String.format("jdbc:sqlite:plugins/%s", path));
-	}
+    public void connect() throws SQLException {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        connection = DriverManager.getConnection(String.format("jdbc:sqlite:plugins/%s", path));
+    }
 
 }

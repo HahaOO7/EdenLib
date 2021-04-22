@@ -1,27 +1,37 @@
 package at.haha007.edenlib.database;
 
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 abstract public class SqlDatabase {
-	protected Connection connection;
+    @NotNull
+    public static SqlDatabase fromYamlSection(ConfigurationSection cfg, JavaPlugin plugin) {
+        if (!cfg.getBoolean("use", false)) return new SqliteDatabase(plugin, "data.db");
+        return new MySqlDatabase(cfg.getString("host"), cfg.getString("username"), cfg.getString("password"), cfg.getString("database"), cfg.getString("datasource"), cfg.getBoolean("useSSL"));
+    }
 
-	 public PreparedStatement prepareStatement(String statement) throws SQLException {
-	 	return connection.prepareStatement(statement);
-	 }
+    protected Connection connection;
 
-	abstract public void connect() throws SQLException;
+    public PreparedStatement prepareStatement(String statement) throws SQLException {
+        return connection.prepareStatement(statement);
+    }
 
-	public void disconnect() throws SQLException {
-		if (isConnected()) connection.close();
-	}
+    abstract public void connect() throws SQLException;
 
-	public boolean isConnected() throws SQLException {
-		return connection != null && !connection.isClosed();
-	}
+    public void disconnect() throws SQLException {
+        if (isConnected()) connection.close();
+    }
 
-	public Connection getConnection() {
-		return connection;
-	}
+    public boolean isConnected() throws SQLException {
+        return connection != null && !connection.isClosed();
+    }
+
+    public Connection getConnection() {
+        return connection;
+    }
 }
