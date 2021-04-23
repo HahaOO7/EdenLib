@@ -1,4 +1,4 @@
-package at.haha007.edenlib.utils;
+package at.haha007.edenlib;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;

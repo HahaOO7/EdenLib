@@ -3,6 +3,7 @@ package at.haha007.edenlib.utils;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -16,6 +17,7 @@ import java.util.*;
 
 import static at.haha007.edenlib.utils.ReflectionUtils.*;
 
+@SuppressWarnings("unused")
 public class ItemUtils {
     private static final Class<?> craftItemStackClass;
     private static final Class<?> itemStackClass;
@@ -91,16 +93,16 @@ public class ItemUtils {
         return item;
     }
 
-    public static ItemStack getItem(Material material, String name, List<String> lore) {
+    public static ItemStack getItem(Material material, Component name, List<Component> lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setLore(lore);
-        meta.setDisplayName(name);
+        meta.lore(lore);
+        meta.displayName(name);
         item.setItemMeta(meta);
         return item;
     }
 
-    public static ItemStack getItem(Material material, String name, String... lore) {
+    public static ItemStack getItem(Material material, Component name, Component... lore) {
         return getItem(material, name, Arrays.asList(lore));
     }
 

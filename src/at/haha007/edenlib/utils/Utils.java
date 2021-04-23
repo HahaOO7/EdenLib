@@ -14,14 +14,12 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static at.haha007.edenlib.utils.ReflectionUtils.*;
 
+@SuppressWarnings("unused")
 public class Utils {
     private static final Random rand = new Random();
     private static final Class<?> packetPlayOutEntityMetadataClass;
@@ -65,6 +63,10 @@ public class Utils {
     private static final Field packetPlayOutSpawnEntityLivingD;
     private static final Field packetPlayOutSpawnEntityLivingE;
     private static final Field packetPlayOutSpawnEntityLivingF;
+
+    private static final Field playerConnectionField;
+
+    private static final Method sendPacketMethod;
 
     private static final Object dataWatcherSerializerA;
     private static final Object dataWatcherSerializerB;
@@ -144,12 +146,19 @@ public class Utils {
 
         dataWatcherRegister = getMethod(dataWatcherClass, "register", dataWatcherObjectClass, Object.class);
 
-        dataWatcherSerializerA = getStaticFieldValue(dataWatcherRegistryClass, "a");
-        dataWatcherSerializerB = getStaticFieldValue(dataWatcherRegistryClass, "b");
-        dataWatcherSerializerI = getStaticFieldValue(dataWatcherRegistryClass, "i");
+        dataWatcherSerializerA = getStaticFieldValue(Objects.requireNonNull(getField(dataWatcherRegistryClass, "a")));
+        dataWatcherSerializerB = getStaticFieldValue(Objects.requireNonNull(getField(dataWatcherRegistryClass, "b")));
+        dataWatcherSerializerI = getStaticFieldValue(Objects.requireNonNull(getField(dataWatcherRegistryClass, "i")));
 
+        Class<?> entityPlayerClass = getNmsClass("EntityPlayer");
+        playerConnectionField = getField(Objects.requireNonNull(entityPlayerClass), "playerConnection");
 
-        fallingBlockEntityType = getStaticFieldValue(entityTypesClass, "FALLING_BLOCK");
+        Class<?> playerConnectionClass = getNmsClass("PlayerConnection");
+        sendPacketMethod = getMethod(Objects.requireNonNull(playerConnectionClass), "sendPacket", getNmsClass("Packet"));
+
+        fallingBlockEntityType = getStaticFieldValue(Objects.requireNonNull(getField(entityTypesClass, "FALLING_BLOCK")));
+
+        Arrays.stream(Utils.class.getDeclaredFields()).filter(field -> getStaticFieldValue(field) == null).map(field -> "[EdenLib] Field is null: " + field.getName()).forEach(System.err::println);
     }
 
     public static String combineStrings(int startIndex, int endIndex, String... strings) {
@@ -205,9 +214,9 @@ public class Utils {
     public static void sendPacket(Player player, Object nmsPacket) {
         Object nmsPlayer = invokeMethod(player, playerGetHandle, new Class[0], new Object[0]);
         if (nmsPlayer == null) return;
-        Object nmsPlayerConnection = getFieldValue(nmsPlayer, "playerConnection");
+        Object nmsPlayerConnection = playerConnectionField;
         if (nmsPlayerConnection == null) return;
-        invokeMethod(nmsPlayerConnection, "sendPacket", new Class[]{getNmsClass("Packet")}, new Object[]{nmsPacket});
+        invokeMethod(nmsPlayerConnection, sendPacketMethod, nmsPacket);
     }
 
     public static void displayFakeBlock(Player player, Vector location, Object block, int entityId, UUID entityUUID) {
